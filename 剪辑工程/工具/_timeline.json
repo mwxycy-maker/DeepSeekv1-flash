@@ -140,6 +140,9 @@
  "events": {
   "ds_badge": 0.95,
   "tok": 4.58,
+  "tok_in": 4.02,
+  "tok_full": 5.57,
+  "tok_out": 7.07,
   "gpt_badge": 5.92,
   "op_badge": 6.77,
   "task1": 10.55,

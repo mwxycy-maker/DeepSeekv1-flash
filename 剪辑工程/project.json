@@ -5,6 +5,7 @@
  "sources": {
   "aroll_a": "media/aroll_a.mp4",
   "aroll_b": "media/aroll_b.mp4",
+  "person_a": "media/person_a.mp4",
   "xuanyun": "media/xuanyun.mp4",
   "mv_gpt": "media/mv_gpt.mp4",
   "mv_op": "media/mv_op.mp4",
@@ -1308,6 +1309,9 @@
  "events": {
   "ds_badge": 0.95,
   "tok": 4.58,
+  "tok_in": 4.02,
+  "tok_full": 5.57,
+  "tok_out": 7.07,
   "gpt_badge": 5.92,
   "op_badge": 6.77,
   "task1": 10.55,

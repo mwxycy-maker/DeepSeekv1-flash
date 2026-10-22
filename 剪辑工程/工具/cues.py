@@ -39,18 +39,20 @@ S = lambda f, at, db=-10, align='start', **k: dict(file=f, at=at, db=db, align=a
 SFX = [
     # ①
     S('pop', EV['ds_badge'], -9),
-    S('whoosh_swipe', EV['tok'] - .05, -8), S('whoosh_swipe', EV['tok'] + .07, -11),
-    S('whoosh_low', EV['gpt_badge'] - .45, -13, dur=.8),
+    # 5 亿花字：数字上涨配上升音，涨满一记轻重音 + 闪光
+    S('whoosh_deep', EV['tok_in'] - .1, -13, dur=1.0),
+    S('riser_short', EV['tok_full'], -15, 'end'),
+    S('impact', EV['tok_full'], -12), S('sparkle_star', EV['tok_full'] + .02, -15, dur=1.3),
+    S('whoosh_swipe', EV['tok_out'], -13),
     S('pop', EV['gpt_badge'], -9), S('pop', EV['op_badge'], -9),
     S('whoosh_deep', EV['task1'] - .9, -12, dur=1.4),
     S('whoosh_swipe', EV['task1'] - .2, -10), S('whoosh_swipe', EV['task2'] - .2, -10), S('whoosh_swipe', EV['task3'] - .2, -10),
     S('whoosh_deep', EV['vs_in'] - .35, -8, dur=1.6),
-    S('zap', EV['vs_in'] + .1, -14, dur=1.2),
+    # VS：闪电动画配轻微电流声（持续、很轻），亮起时再点两下
+    S('zap', EV['vs_in'] + .1, -24, dur=3.4), S('zap', EV['vs_in'] + 3.2, -27, dur=1.2),
+    S('zap_short', EV['vs_hit'], -20), S('zap_short', EV['vs_in'] + .55, -20),
     S('impact', EV['vs_in'] + .55, -9),
-    S('riser_short', VS_SLAM, -12, 'end'),
-    S('hit_hard', VS_SLAM, -4, dur=2.6), S('lightning', VS_SLAM, -14, dur=1.5),
     # ②
-    S('whoosh_low', EV['vs_end'] - .1, -9, dur=1.2),
     S('pop', EV['opus_domain'], -10),
     S('whoosh_swipe', EV['chase'] + .95, -9),
     S('pop_cartoon', EV['ds_q'] - .05, -6),

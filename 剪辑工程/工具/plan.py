@@ -33,6 +33,7 @@ SHOTS.append((999, '（待制作）', A(7, '我先让') - .1))
 # ---------------------------------------------------------------- 事件（场景与音效共用）
 EV = {
     'ds_badge': A(0, 'DeepSeek'), 'tok': A(0, '5亿') - .15,
+    'tok_in': A(0, '我猛蹬') - .05, 'tok_full': AE(0, 'Token'), 'tok_out': AE(0, 'Token') + 1.5,
     'gpt_badge': A(0, 'GPT'), 'op_badge': A(0, 'Claude'),
     'task1': A(0, '建模') - .3, 'task2': A(0, '制作游戏'), 'task3': A(0, '制作视频'),
     'vs_in': A(1, '看看') - .05, 'vs_hit': A(1, '谁将'), 'vs_end': VS_HOLD[0] + VS_HOLD[1],
@@ -49,7 +50,7 @@ EV = {k: round(v, 3) for k, v in EV.items()}
 
 # ---------------------------------------------------------------- 素材
 SOURCES = {
-    'aroll_a': 'media/aroll_a.mp4', 'aroll_b': 'media/aroll_b.mp4',
+    'aroll_a': 'media/aroll_a.mp4', 'aroll_b': 'media/aroll_b.mp4', 'person_a': 'media/person_a.mp4',
     'xuanyun': 'media/xuanyun.mp4',
     'mv_gpt': 'media/mv_gpt.mp4', 'mv_op': 'media/mv_op.mp4', 'mv_ds': 'media/mv_ds.mp4',
 }

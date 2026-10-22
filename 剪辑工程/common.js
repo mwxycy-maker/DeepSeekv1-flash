@@ -38,6 +38,22 @@ function aroll(ctx, t, {x = 0, y = 0, w = W, h = H, zoom = 1, fx = .5, fy = .3} 
   E.cover(ctx, v, x, y, w, h, .5, .5, crop);
 }
 
+// 人物抠像层：并排视频（左原画 | 右遮罩），把字放到人物后面时，最后再盖上这一层
+// key: 抠像素材，from: 该素材对应的口播源起点
+function personCut(ctx, t, key, from, a = 1) {
+  const s = srcAt(t); const v = E.video(key, Math.max(0, s - from)); if (!E.ready(v) || a <= 0) return;
+  const [vw, vh] = E.sizeOf(v); const w = vw / 2;
+  const c = E.tmp('pcut', w, vh), g = c.getContext('2d', {willReadFrequently: true});
+  g.globalCompositeOperation = 'copy'; g.drawImage(v, 0, 0, w, vh, 0, 0, w, vh);
+  const im = g.getImageData(0, 0, w, vh);
+  const m = E.tmp('pmask', w, vh), gm = m.getContext('2d', {willReadFrequently: true});
+  gm.globalCompositeOperation = 'copy'; gm.drawImage(v, w, 0, w, vh, 0, 0, w, vh);
+  const mk = gm.getImageData(0, 0, w, vh).data, px = im.data;
+  for (let i = 3; i < px.length; i += 4) px[i] = mk[i - 3];
+  g.putImageData(im, 0, 0);
+  ctx.save(); ctx.globalAlpha *= a; E.cover(ctx, c, 0, 0, W, H, .5, .5, AR_CROP); ctx.restore();
+}
+
 // ------------------------------------------------------------------ 背景：差评君浅灰渐变 + 网点 + 柔光（不平涂）
 function bgLight(ctx, t, tint = [236, 238, 242]) {
   const g = ctx.createRadialGradient(W * .5, H * .38, 80, W * .5, H * .5, W * .75);
@@ -137,16 +153,19 @@ function exitPose(u, dir = 1) {
   const k = easeIn(u, 2.4);
   return {s: lerp(1, .82, k), ry: lerp(0, 18 * dir, k), rx: lerp(0, -28, k), rz: lerp(0, -16 * dir, k), dx: lerp(0, -260 * dir, k), dy: lerp(0, 1100, k), a: 1};
 }
-// 画一张窗口卡片。o: {cx, cy, w, h, t, a(进场时刻), b(退场时刻), dir, ry, rx, rz, scale, content(g,x,y,w,h), key, mark}
+// 平面进出场（第②段起演示不用 3D 视角）：轻微放大 + 上浮 + 淡入；退场缩小下沉淡出
+function flatPose(u) { const k = eOut(u, 4); return {s: lerp(.88, 1, k), ry: 0, rx: 0, rz: 0, dx: 0, dy: lerp(70, 0, k), a: clamp(u * 2.2, 0, 1)}; }
+function flatExit(u) { const k = easeIn(u, 2); return {s: lerp(1, .9, k), ry: 0, rx: 0, rz: 0, dx: 0, dy: lerp(0, 60, k), a: 1 - k}; }
+// 画一张窗口卡片。o: {cx, cy, w, h, t, a(进场时刻), b(退场时刻), dir, ry, rx, rz, scale, content(g,x,y,w,h), key, mark, flat}
 function windowCard(ctx, o) {
   const t = o.t; const ui = o.a == null ? 1 : seg(t, o.a, o.a + (o.dIn || .7)); const uo = o.b == null ? 0 : seg(t, o.b, o.b + (o.dOut || .55));
   if (ui <= 0 || uo >= 1) return null;
-  const p1 = flyPose(ui, o.dir || 1), p2 = exitPose(uo, o.exitDir || o.dir || 1);
+  const p1 = o.flat ? flatPose(ui) : flyPose(ui, o.dir || 1), p2 = o.flat ? flatExit(uo) : exitPose(uo, o.exitDir || o.dir || 1);
   const scale = (o.scale || 1) * p1.s * p2.s;
   const ry = (o.ry || 0) + p1.ry + p2.ry, rx = (o.rx || 0) + p1.rx + p2.rx, rz = (o.rz || 0) + p1.rz + p2.rz;
   const cx = o.cx + p1.dx + p2.dx, cy = o.cy + p1.dy + p2.dy;
   const c = cardCanvas(o.key, o.w, o.h, o.content, o.style || CARD_STYLE);
-  const M = E.persp(ctx, c, o.w, o.h, cx, cy, {scale, ry, rx, rz, a: p1.a * (o.alpha == null ? 1 : o.alpha), radius: (o.style || CARD_STYLE).radius, shadowK: o.shadowK == null ? .55 : o.shadowK, n: 12});
+  const M = E.persp(ctx, c, o.w, o.h, cx, cy, {scale, ry, rx, rz, a: p1.a * (p2.a == null ? 1 : p2.a) * (o.alpha == null ? 1 : o.alpha), radius: (o.style || CARD_STYLE).radius, shadowK: o.shadowK == null ? .55 : o.shadowK, n: 12});
   if (o.mark && ui > .6) dataMark(ctx, M, o.w, o.h, o.mark, clamp((ui - .6) / .4, 0, 1) * (1 - uo) * (o.alpha == null ? 1 : o.alpha));
   return M;
 }

@@ -6,19 +6,42 @@ const POS = {ds_r: [1600, 330], ds_l: [300, 360], gpt: [1590, 285], op: [1590, 6
 
 function floatY(t, k = 0) { return Math.sin(t * 1.6 + k) * 6; }
 
-// Token 卡片（按截图重绘成清晰大字卡）
-function tokenCard(ctx, t, a, b, cx, cy, value, dir, delay) {
-  const ui = seg(t, a + delay, a + delay + .6), uo = b == null ? 0 : seg(t, b, b + .5);
-  if (ui <= 0 || uo >= 1) return;
-  const key = 'tok' + delay;
-  const c = cardCanvas(key, 760, 250, (g, x, y, w, h) => {
-    g.fillStyle = '#f4f5f7'; g.fillRect(x, y, w, h);
-    g.font = '118px Num'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = '#15171c';
-    g.fillText(rollNum(value, seg(t, a + delay, a + delay + 1.1)), x + 44, y + h / 2 + 8);
-    g.font = '44px Num'; g.fillStyle = '#4d6bfe'; g.textAlign = 'right'; g.fillText('TOKENS', x + w - 36, y + h / 2 + 30);
-  }, {border: 6, bezel: 0, radius: 34, col: '#16181d'});
-  const p1 = flyPose(ui, dir), p2 = exitPose(uo, dir);
-  E.persp(ctx, c, 760, 250, cx + p1.dx + p2.dx, cy + p1.dy + p2.dy, {scale: 1.22 * p1.s * p2.s, ry: -10 * dir + p1.ry + p2.ry, rx: 6 + p1.rx + p2.rx, rz: p1.rz + p2.rz, a: p1.a, radius: 34, n: 10});
+// 5 亿 Token：人物后面的大花字，跟口播同步从 0 涨到 5 亿，涨满后停留再离场
+// 头部在画面中间，字分在头两侧：左边数字（右对齐），右边 TOKEN
+function tokenBig(ctx, t) {
+  const a = EV.tok_in, f = EV.tok_full, o = EV.tok_out;
+  const ui = seg(t, a - .1, a + .35), uo = seg(t, o, o + .45);
+  if (ui <= 0 || uo >= 1) return 0;
+  const k = eOut(ui, 3) * (1 - eInOut(uo));
+  // 背景压暗（人物稍后原样盖回来，形成前后层次）
+  ctx.fillStyle = `rgba(4,6,16,${.5 * k})`; ctx.fillRect(0, 0, W, H);
+  const r = seg(t, a, f), v = 5 * (1 - Math.pow(1 - r, 2.2));
+  const num = r >= 1 ? '5' : v.toFixed(2);
+  const bump = r >= 1 ? Math.max(0, 1 - (t - f) / .35) : 0;
+  const lift = -40 * eInOut(uo), al = (1 - eInOut(uo));
+  ctx.save(); ctx.globalAlpha *= clamp(ui * 2, 0, 1) * al;
+  ctx.translate(860, 330 + lift); const sc = lerp(1.18, 1, eOut(ui, 4)) * (1 + .08 * bump); ctx.scale(sc, sc);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'right';
+  const gr = ctx.createLinearGradient(0, -230, 0, 20); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#8ea2ff');
+  ctx.shadowColor = 'rgba(77,107,254,.95)'; ctx.shadowBlur = 40 + 60 * bump; ctx.fillStyle = gr;
+  // 数字用 Bebas（窄），「亿」用黑体（标题字体里的「亿」不好认）
+  ctx.font = '230px Black'; const yw = ctx.measureText('亿').width; ctx.fillText('亿', 0, 95);
+  ctx.font = '360px Num'; ctx.fillText(num, -yw - 14, 112);
+  ctx.restore();
+  const ut = seg(t, a + .15, a + .7);
+  ctx.save(); ctx.globalAlpha *= clamp(ut * 2, 0, 1) * al;
+  ctx.translate(1120 + (1 - eOut(ut, 4)) * 260, 335 + lift); ctx.scale(1 + .06 * bump, 1 + .06 * bump);
+  ctx.font = '300px Num'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  try { ctx.letterSpacing = '10px'; } catch (e) {}
+  ctx.lineJoin = 'round'; ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(77,107,254,.9)'; ctx.strokeText('TOKEN', 0, 0);
+  ctx.shadowColor = 'rgba(77,107,254,.8)'; ctx.shadowBlur = 30; ctx.fillStyle = '#fff'; ctx.fillText('TOKEN', 0, 0);
+  ctx.restore();
+  return k;
+}
+function tokenLayer(ctx, t) {
+  const k = tokenBig(ctx, t);
+  if (k > 0) personCut(ctx, t, 'person_a', 3.5, Math.min(1, k * 3));
+  return k;
 }
 
 VIS[101] = (ctx, t) => {
@@ -28,28 +51,24 @@ VIS[101] = (ctx, t) => {
 };
 
 VIS[102] = (ctx, t, s) => {
-  // 口播压暗虚化，两张 Token 卡一起甩进来，数字滚动
-  const u = seg(t, s.start, s.start + .3), uo = seg(t, s.end - .25, s.end + .1);
-  const k = u * (1 - uo);
   aroll(ctx, t);
-  if (k > 0) {
-    const v = arollFrame(t); if (E.ready(v)) E.blurDraw(ctx, v, 14 * k, 0, 0, W, H, k, 'source-over');
-    ctx.fillStyle = `rgba(6,8,14,${.42 * k})`; ctx.fillRect(0, 0, W, H);
-  }
+  const k = tokenLayer(ctx, t);
   const [x, y] = POS.ds_r;
   badge(ctx, 'ds', x, y + floatY(t), 100, 1 - k, {side: 'below', nameSize: 48});
-  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 345, 244589332, 1, 0);
-  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 680, 245891058, 1, .12);
 };
 
 VIS[103] = (ctx, t, s) => {
   aroll(ctx, t);
-  // DeepSeek 徽章从右侧滑到左侧，给对手让位
-  const m = eInOut(seg(t, s.start, s.start + .65));
+  tokenLayer(ctx, t);
+  // DeepSeek 徽章从右侧滑到左侧，给对手让位（等花字离场后再出现）
+  const m = eInOut(seg(t, EV.tok_out, EV.tok_out + .65));
   const x = lerp(POS.ds_r[0], POS.ds_l[0], m), y = lerp(POS.ds_r[1], POS.ds_l[1], m) - Math.sin(m * Math.PI) * 60;
-  badge(ctx, 'ds', x, y + floatY(t), 100, 1, {side: 'below', nameSize: 48});
-  badgePop(ctx, t, 'gpt', POS.gpt[0], POS.gpt[1] + floatY(t, 1), 92, EV.gpt_badge, null, {side: 'below', nameSize: 46});
-  badgePop(ctx, t, 'op', POS.op[0], POS.op[1] + floatY(t, 2), 92, EV.op_badge, null, {side: 'below', nameSize: 46});
+  badge(ctx, 'ds', x, y + floatY(t), 100, seg(t, EV.tok_out + .35, EV.tok_out + .65), {side: 'below', nameSize: 48});
+  // 花字还在时，对手徽章先在花字下方并排弹出；花字离场后滑到右侧原位
+  const mv = eInOut(seg(t, EV.tok_out + .1, EV.tok_out + .8));
+  const gx = lerp(1370, POS.gpt[0], mv), gy = lerp(660, POS.gpt[1], mv), ox = lerp(1710, POS.op[0], mv), oy = lerp(660, POS.op[1], mv);
+  badgePop(ctx, t, 'gpt', gx, gy + floatY(t, 1), 92, EV.gpt_badge, null, {side: 'below', nameSize: 46});
+  badgePop(ctx, t, 'op', ox, oy + floatY(t, 2), 92, EV.op_badge, null, {side: 'below', nameSize: 46});
 };
 
 // 三项比拼：口播变形成左下角头像，三张窗口卡依次飞入（同一角度、同一方向）

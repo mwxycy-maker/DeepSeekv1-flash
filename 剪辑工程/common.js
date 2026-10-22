@@ -171,6 +171,7 @@ function windowCard(ctx, o) {
 }
 // 内容：视频 / 图片铺满窗口
 const fillVideo = (key, ts, rate = 1, fx = .5, fy = .5, crop = null) => (g, x, y, w, h) => {
+  if (!(key in window.VSRC)) { g.fillStyle = '#1b1f29'; g.fillRect(x, y, w, h); return; }
   const v = E.video(key, ts, rate); if (E.ready(v)) E.cover(g, v, x, y, w, h, fx, fy, crop);
 };
 const fillImage = (name, fx = .5, fy = .5, crop = null, bg = '#fff') => (g, x, y, w, h) => {
@@ -186,14 +187,14 @@ const fitImage = (name, bg = '#fff', pad = 0) => (g, x, y, w, h) => {
 // 贴在窗口卡片右下角，跟着透视一起动；半透明深色胶囊
 function dataMark(ctx, M, w, h, d, a = 1) {
   if (a <= .01 || !d) return;
-  const txt = `⏱ ${d.time}   ◆ ${d.tok}M Token   ¥ ${d.cost}`;
+  const txt = `${d.time}  ·  ${d.tok}M Token  ·  ¥${d.cost}`;
   const [px, py] = E.mapPt(M, w - 40, h - 40);
   const [qx, qy] = E.mapPt(M, w - 40 - 100, h - 40);
   const sc = clamp(Math.hypot(px - qx, py - qy) / 100, .35, 1.2);
   ctx.save(); ctx.globalAlpha *= a * .92; ctx.translate(px, py); ctx.scale(sc, sc);
-  ctx.font = '27px Black'; const tw = ctx.measureText(txt).width;
-  rr(ctx, -tw - 30, -50, tw + 30, 46, 23); ctx.fillStyle = 'rgba(10,12,18,.62)'; ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.93)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(txt, -15, -27);
+  ctx.font = '25px Black'; const tw = ctx.measureText(txt).width;
+  rr(ctx, -tw - 28, -46, tw + 28, 42, 21); ctx.fillStyle = 'rgba(10,12,18,.58)'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(txt, -14, -25);
   ctx.restore();
 }
 

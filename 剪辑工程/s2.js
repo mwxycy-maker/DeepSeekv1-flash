@@ -6,7 +6,7 @@ const MV_AT = X.mv[0], MV_LEN = X.mv[1];
 // 三条视频从上到下：GPT、Opus、DeepSeek（分镜表顺序）
 const MV_ROWS = [{m: 'gpt', key: 'mv_gpt'}, {m: 'op', key: 'mv_op'}, {m: 'ds', key: 'mv_ds'}];
 // 基础画幅：上下铺满，画面加宽（视频按原比例裁切，不拉伸）
-const MV = {w: 760, h: 346, ys: [180, 540, 900]};
+const MV = {w: 1000, h: 346, ys: [180, 540, 900]};
 const MV_STYLE = {border: 6, bezel: 8, radius: 20, col: '#16181d'};
 
 // 眩晕片段：Opus 做的代码生成视频（原声做背景音）。大画幅铺满
@@ -59,7 +59,7 @@ VIS[202] = (ctx, t, s) => {
 function mvLayout(t) {
   const k1 = eInOut(seg(t, EV.reveal + .05, EV.reveal + .75));
   const k2 = eInOut(seg(t, EV.data_in - .35, EV.data_in + .35));
-  const cx = lerp(lerp(960, 735, k1), 690, k2), s = lerp(lerp(1, .86, k1), .8, k2);
+  const cx = lerp(lerp(990, 740, k1), 690, k2), s = lerp(lerp(1, .8, k1), .7, k2);
   return {cx, s, y: i => 540 + (MV.ys[i] - 540) * s, right: cx + MV.w * s / 2, left: cx - MV.w * s / 2};
 }
 // focus: 放大到前面的那一条（DeepSeek = 2）
@@ -68,9 +68,10 @@ function mvStack(ctx, t, {aIn = null, focusK = 0, focus = 2} = {}) {
   const order = focusK > 0 ? [0, 1, 2].filter(i => i !== focus).concat([focus]) : [0, 1, 2];
   for (const i of order) {
     const r = MV_ROWS[i];
-    const ts = t >= MV_AT ? (t - MV_AT) % MV_LEN : .6;   // 插入段三条同时开始；之后继续循环（静音）
+    const t0 = EV.guess + .2 + i * .16;                   // 出现即静音播放
+    const ts = t >= MV_AT ? (t - MV_AT) % MV_LEN : Math.max(0, t - t0) % MV_LEN;   // 插入段三条从头同时开始（有声），之后继续循环（静音）
     const f = i === focus ? eInOut(focusK) : 0;
-    const cx = lerp(L.cx, 1010, f), cy = lerp(L.y(i), 465, f), sc = lerp(L.s, 1.78, f);
+    const cx = lerp(L.cx, 1040, f), cy = lerp(L.y(i), 455, f), sc = lerp(L.s, 1.5, f);
     const al = focusK > 0 && i !== focus ? 1 - .6 * eInOut(focusK) : 1;
     windowCard(ctx, {t, key: 'mv' + i, cx, cy, w: MV.w, h: MV.h, a: aIn == null ? null : aIn + i * .16, flat: true, scale: sc,
       alpha: al, style: MV_STYLE, content: fillVideo(r.key, ts, 1, .5, .5)});
@@ -83,7 +84,7 @@ function guessNums(ctx, t, a, b) {
   const L = mvLayout(t);
   MV.ys.forEach((y, i) => {
     const u = seg(t, a + i * .16, a + i * .16 + .4);
-    ctx.save(); ctx.globalAlpha = clamp(u * 3, 0, 1) * (1 - uo); ctx.translate(L.left - 110, L.y(i)); ctx.scale(backOut(u, 2), backOut(u, 2));
+    ctx.save(); ctx.globalAlpha = clamp(u * 3, 0, 1) * (1 - uo); ctx.translate(L.left - 78, L.y(i)); ctx.scale(backOut(u, 2), backOut(u, 2));
     ctx.font = '200px Num'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#c3c9d4'; ctx.fillText(String(i + 1), 0, 8); ctx.restore();
   });
@@ -102,7 +103,7 @@ function countdown(ctx, t, t0) {
   const k = t - t0; if (k < -.3 || k >= 3) return;
   const ap = seg(k, -.3, 0);
   const n = 3 - Math.max(0, Math.floor(k)), f = Math.max(0, k) % 1;
-  const cx = 1650, cy = 540;
+  const cx = 1710, cy = 540;
   ctx.save(); ctx.globalAlpha = ap;
   ctx.lineWidth = 16; ctx.strokeStyle = 'rgba(21,23,28,.12)'; ctx.beginPath(); ctx.arc(cx, cy, 165, 0, 7); ctx.stroke();
   ctx.strokeStyle = '#4d6bfe'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, cy, 165, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - f)); ctx.stroke();
@@ -115,6 +116,7 @@ function countdown(ctx, t, t0) {
 VIS[204] = (ctx, t, s) => {
   bgLight(ctx, t);
   mvStack(ctx, t);
+  E.flash(ctx, Math.max(0, 1 - (t - MV_AT) / .2) * .45);   // 三条视频从头同时开始的提示
   guessNums(ctx, t, -10, s.end - .4);
   // 插入段没有口播，人像淡出；最后 3 秒倒计时
   const hk = 1 - seg(t, s.start, s.start + .4);
@@ -184,4 +186,6 @@ VIS[206] = (ctx, t, s) => {
 VIS[301] = (ctx, t, s) => {
   bgLight(ctx, t);
   hostMorph(ctx, t, 1 - seg(t, s.start, s.start + .7));
+  // 「DeepSeek 4.1 Flash 重点升级」：徽章弹出
+  badgePop(ctx, t, 'ds', 1600, 330, 100, EV.ds_up, s.end - .35, {side: 'below', nameSize: 48});
 };

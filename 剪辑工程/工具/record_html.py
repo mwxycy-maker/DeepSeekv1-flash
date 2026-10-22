@@ -14,6 +14,15 @@ FRAMES = pathlib.Path('/tmp/claude-0/rec_frames')
 THREE = {'0.128.0': '/home/claude/tools/three-r128', '0.160.0': '/home/claude/tools/three-r160'}
 CFG = json.load(open(HERE / 'record_config.json'))
 
+RAF = r"""
+(() => {
+  // 每个录制帧只渲染一次：rAF 改为按录制帧率的（假）定时器；每帧开头先摆好主相机
+  const C = window.__REC; const FPS = window.__REC_FPS || 24;
+  window.requestAnimationFrame = cb => setTimeout(() => { try { C && C.place && C.place(); } catch (e) {} cb(performance.now()); }, 1000 / FPS - 0.5);
+  window.cancelAnimationFrame = id => clearTimeout(id);
+})();
+"""
+
 INIT = r"""
 (() => {
   // 固定随机种子
@@ -60,21 +69,13 @@ INIT = r"""
     if (C.first && C.orbit && !C.locked) { lockCam(C.first); C.locked = true; }
     if (C.first && C.orbit && cam === C.first) place(C.first);
   }
-  // 每个录制帧只渲染一次：rAF 改成按录制帧率的定时器（定时器由假时钟推进），并锁定不让假时钟覆盖
-  const FPS = window.__REC_FPS || 24;
-  let rid = 0; const pending = new Map();
-  const myRAF = cb => { const id = ++rid; pending.set(id, setTimeout(() => { pending.delete(id); try { if (C.first && C.orbit) place(C.first); } catch (e) {} cb(performance.now()); }, 1000 / FPS - 1)); return id; };
-  const myCAF = id => { const h = pending.get(id); if (h != null) { clearTimeout(h); pending.delete(id); } };
-  if (window.__REC_RAF) try {
-    Object.defineProperty(window, 'requestAnimationFrame', {get: () => myRAF, set: () => {}, configurable: false});
-    Object.defineProperty(window, 'cancelAnimationFrame', {get: () => myCAF, set: () => {}, configurable: false});
-  } catch (e) {}
   function wrap(obj) {
     if (!obj || obj.__recWrapped || typeof obj.render !== 'function') return;
     const orig = obj.render; obj.__recWrapped = true;
     obj.render = function (scene, camera) { try { hook(camera, this, scene); } catch (e) {} return orig.apply(this, arguments); };
   }
   C.wrap = wrap;
+  C.place = () => { if (C.first && C.orbit) { if (!C.locked) { lockCam(C.first); C.locked = true; } place(C.first); } };
   // r150+：构造函数里 this.isWebGLRenderer = true —— 借原型上的 setter 拿到实例
   Object.defineProperty(Object.prototype, 'isWebGLRenderer', { configurable: true,
     set(v) { Object.defineProperty(this, 'isWebGLRenderer', {value: v, writable: true, configurable: true}); const self = this; queueMicrotask(() => wrap(self)); },
@@ -124,6 +125,7 @@ async def run(name, probe=False):
         await pg.add_init_script('window.__HIDE_UI=%s;window.__EXTRA_CSS=%s;window.__ALLOW_ORTHO=%s;window.__CAM_EXPR=%s;window.__REC_FPS=%d;' % (json.dumps(c.get('hide_ui', True)), json.dumps(c.get('css', '')), json.dumps(c.get('ortho', False)), json.dumps(c.get('cam', '')), fps) + INIT)
         await pg.clock.install(time=1_700_000_000_000)
         await pg.clock.pause_at(1_700_000_000_050)
+        await pg.add_init_script(RAF)
         import unicodedata
         fpath = next(p for p in SRC.glob('*/*.html') if unicodedata.normalize('NFC', str(p.relative_to(SRC))) == unicodedata.normalize('NFC', c['file']))
         await pg.goto(fpath.as_uri(), wait_until='load', timeout=120000)

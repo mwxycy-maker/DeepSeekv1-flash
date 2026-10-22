@@ -51,7 +51,8 @@ VIS[605] = (ctx, t, s) => {
 // ---------------------------------------------------------------- ⑦ 赛车
 const GAME_KEY = {gpt: 'game_gpt', op: 'game_op', ds: 'game_ds'};
 const GW = {w: 1640, h: 922, cx: 990, cy: 505};
-const gameContent = (m, ts, z = 1, fx = .5, fy = .5) => fillZoom(GAME_KEY[m], ((ts % 10) + 10) % 10, z, fx, fy);
+// 循环时跳过素材第 0 秒（录制开头有一帧镜头复位）：在 [0.6, 10) 里循环
+const gameContent = (m, ts, z = 1, fx = .5, fy = .5) => fillZoom(GAME_KEY[m], ts < 10 ? Math.max(ts, 0) : .6 + ((ts - .6) % 9.4), z, fx, fy);
 function gameMark(m) { const d = X.data.game[m]; return {time: d[0], tok: d[1], cost: d[2]}; }
 function gameWindow(ctx, t, m, o) {
   const M = windowCard(ctx, {t, key: 'game_' + (o.key || m), cx: GW.cx, cy: GW.cy, w: GW.w, h: GW.h, flat: true, mark: gameMark(m), ...o});
@@ -107,11 +108,11 @@ VIS[707] = (ctx, t, s) => {
   bgDark(ctx, t, [16, 14, 34], [6, 6, 14], [255, 60, 160]);
   const k = eInOut(seg(t, s.start, s.start + .7));
   const last = eInOut(seg(t, EV.rank_last, EV.rank_last + .7));
-  const xs = [520, 1040, 1560];
+  const xs = [440, 980, 1520];
   const pos0 = {ds: xs[0], op: xs[1], gpt: xs[2]}, pos1 = {ds: xs[2], op: xs[0], gpt: xs[1]};
   ['op', 'gpt', 'ds'].forEach((m, i) => {
     let x = lerp(pos0[m], pos1[m], last), y = m === 'ds' ? lerp(470, 520, last) : 470;
-    const ss = m === 'ds' ? lerp(1, .29, k) : .29;
+    const ss = m === 'ds' ? lerp(1, .315, k) : .315;
     if (m === 'ds') { x = lerp(GW.cx, x, k); y = lerp(GW.cy, y, k); }
     const al = m === 'ds' ? 1 - .45 * last : 1;
     windowCard(ctx, {t, key: 'rank_' + m, cx: x, cy: y, w: GW.w, h: GW.h, scale: ss, a: m === 'ds' ? null : s.start + .1 + i * .1, flat: true, alpha: al, content: gameContent(m, 5 + (t - s.start))});
@@ -123,10 +124,10 @@ VIS[707] = (ctx, t, s) => {
 // 同屏金额对比：左 DeepSeek 右 Opus，金额框出来，中间「×35」
 VIS[708] = (ctx, t, s) => {
   bgDark(ctx, t, [16, 14, 34], [6, 6, 14], [255, 60, 160]);
-  const sides = [{m: 'ds', cx: 560, ev: 'c_ds', cost: '¥9.2', col: [40, 220, 140]}, {m: 'op', cx: 1380, ev: 'c_op', cost: '¥321', col: [255, 80, 100]}];
+  const sides = [{m: 'ds', cx: 520, ev: 'c_ds', cost: '¥9.2', col: [40, 220, 140]}, {m: 'op', cx: 1400, ev: 'c_op', cost: '¥321', col: [255, 80, 100]}];
   const crashK = t > EV.crash ? Math.max(0, 1 - (t - EV.crash) / .5) : 0;
   sides.forEach((c, i) => {
-    const M = windowCard(ctx, {t, key: 'cmp_' + c.m, cx: c.cx + (c.m === 'ds' ? (E.rng(Math.floor(t * 40))() - .5) * 40 * crashK : 0), cy: 380, w: 760, h: 428,
+    const M = windowCard(ctx, {t, key: 'cmp_' + c.m, cx: c.cx + (c.m === 'ds' ? (E.rng(Math.floor(t * 40))() - .5) * 40 * crashK : 0), cy: 375, w: 860, h: 484,
       a: s.start + i * .15, flat: true, mark: gameMark(c.m), content: gameContent(c.m, 2 + (t - s.start))});
     if (M) { const [bx, by] = E.mapPt(M, 60, 60); badge(ctx, c.m, bx, by, 40, seg(t, s.start + .3, s.start + .7), {side: 'right', nameSize: 30}); }
     const u = seg(t, EV[c.ev], EV[c.ev] + .45); if (u <= 0) return;
@@ -138,7 +139,7 @@ VIS[708] = (ctx, t, s) => {
   });
   const x = seg(t, EV.x35 - .05, EV.x35 + .4);
   if (x > 0) {
-    ctx.save(); ctx.translate(970, 760); const sc = lerp(1.8, 1, eOut(x, 5)); ctx.scale(sc, sc); ctx.globalAlpha = clamp(x * 3, 0, 1);
+    ctx.save(); ctx.translate(960, 760); const sc = lerp(1.8, 1, eOut(x, 5)); ctx.scale(sc, sc); ctx.globalAlpha = clamp(x * 3, 0, 1);
     ctx.font = '170px Num'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd34d'; ctx.shadowColor = 'rgba(255,200,60,.9)'; ctx.shadowBlur = 40; ctx.fillText('×35', 0, 6); ctx.restore();
   }
   if (crashK > 0) E.shake(ctx, crashK, Math.floor(t * 30));

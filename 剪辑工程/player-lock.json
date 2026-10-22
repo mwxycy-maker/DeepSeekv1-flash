@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "api": 1,
+  "source": "https://github.com/AndroidOne-io/video-workbench",
+  "version": "1.0.0",
+  "sha256": {
+    "engine.js": "5ba7b34d65a881c693e8b4271836c86301543a4b92af39cb43d0394ddf74ace0",
+    "player-ui.js": "82e8c395ffc452ceaaf7f6b1da55870b69d625de6bb1d94e88cc1ce8e18387cc",
+    "player.js": "dab90d2eb2052cf400496327ccde24f3bc3a3899eb727f118606311e0ccd8833",
+    "style.css": "64e860729cb4b1ae320b979d6adfd6d55e1f7bd93b6016444b5ca82267d8cc15",
+    "export_mp4.py": "873b61d06a801ddd70f1a2230318f69ec3d0607e2be15e5cf8d285294d2d7733"
+  }
+}

@@ -1,0 +1,8 @@
+.local/
+output/
+__pycache__/
+*.pyc
+_demo-clock.wav
+mix.wav
+_still_*.jpg
+_probe_*.jpg

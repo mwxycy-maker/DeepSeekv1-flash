@@ -1,0 +1,71 @@
+{
+ "tower_ds": {
+  "file": "DeepSeek V4.1-flash 1017/02-雷峰塔_夕照.html",
+  "pre": 1.5,
+  "dur": 16,
+  "orbit": {
+   "el": 10,
+   "omega": 7,
+   "az0": 0,
+   "fov": 35,
+   "target": [
+    0,
+    50,
+    0
+   ],
+   "r": 125
+  },
+  "cam": "window.__leifeng && window.__leifeng.camera"
+ },
+ "tower_gpt": {
+  "file": "GPT-6.1 Sol/02-雷峰塔-3D.html",
+  "pre": 1.0,
+  "dur": 16,
+  "orbit": {
+   "el": 10,
+   "omega": 7,
+   "az0": 0,
+   "fov": 35,
+   "target": [
+    0,
+    14.5,
+    0
+   ],
+   "r": 84
+  }
+ },
+ "tower_op": {
+  "file": "Claude Opus5.5/02-雷峰塔.html",
+  "pre": 1.5,
+  "dur": 16,
+  "orbit": {
+   "el": 10,
+   "omega": 7,
+   "az0": 0,
+   "fov": 35,
+   "target": [
+    0,
+    37,
+    0
+   ],
+   "r": 158
+  }
+ },
+ "store_ds": {
+  "file": "DeepSeek V4.1-flash 1017/03-雨夜便利店.html",
+  "pre": 0.2,
+  "dur": 16,
+  "cam": "window.__mart && window.__mart.camera"
+ },
+ "store_gpt": {
+  "file": "GPT-6.1 Sol/03-雨宿り-雨夜便利店.html",
+  "pre": 0.2,
+  "dur": 16,
+  "cam": "window.__diorama && window.__diorama.camera"
+ },
+ "store_op": {
+  "file": "Claude Opus5.5/03-雨夜コンビニ街角.html",
+  "pre": 0.2,
+  "dur": 16
+ }
+}

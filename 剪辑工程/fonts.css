@@ -1,0 +1,5 @@
+/* 本期字体：由 工具/make_fonts.py 按用到的字生成子集 */
+@font-face{font-family:Sub;src:url(fonts/sub.woff) format("woff");font-display:block}
+@font-face{font-family:Black;src:url(fonts/black.woff) format("woff");font-display:block}
+@font-face{font-family:Title;src:url(fonts/title.woff) format("woff");font-display:block}
+@font-face{font-family:Num;src:url(fonts/num.woff) format("woff");font-display:block}

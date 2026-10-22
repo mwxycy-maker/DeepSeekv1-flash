@@ -4,7 +4,7 @@
 const MV_AT = X.mv[0], MV_LEN = X.mv[1];
 // 三条视频从上到下：GPT、Opus、DeepSeek（分镜表顺序）
 const MV_ROWS = [{m: 'gpt', key: 'mv_gpt'}, {m: 'op', key: 'mv_op'}, {m: 'ds', key: 'mv_ds'}];
-const MV_CARD = {x: 840, w: 500, h: 281, ys: [182, 488, 794]};
+const MV_CARD = {x: 840, w: 520, h: 293, ys: [168, 478, 788]};
 
 // 眩晕片段：Opus 做的代码生成视频（原声做背景音）
 function xuanyunCard(ctx, t, o) {
@@ -15,7 +15,7 @@ VIS[201] = (ctx, t, s) => {
   bgLight(ctx, t);
   xuanyunCard(ctx, t, {cx: 1010, cy: 470, a: s.start + .05, ry: -10, rx: 3});
   // Opus 的绝对领域：Opus 徽章落到窗口右上角
-  badgePop(ctx, t, 'op', 1560, 160, 84, EV.opus_domain, null, {side: 'left', theme: 'light', nameSize: 50});
+  badgePop(ctx, t, 'op', 1730, 300, 84, EV.opus_domain, null, {side: 'below', theme: 'light', nameSize: 44});
   // 口播从全屏收进左下角（承接 VS 后的白闪，用弹出）
   hostPop(ctx, t, s.start + .15, null);
 };
@@ -25,7 +25,7 @@ VIS[202] = (ctx, t, s) => {
   // 窗口往左让位，保持同一透视方向
   const m = eInOut(seg(t, s.start, s.start + .7));
   xuanyunCard(ctx, t, {cx: lerp(1010, 820, m), cy: lerp(470, 450, m), scale: lerp(1, .78, m), ry: lerp(-10, -16, m), rx: 3});
-  badge(ctx, 'op', lerp(1560, 1300, m), lerp(160, 190, m), lerp(84, 70, m), 1, {side: 'none'});
+  badge(ctx, 'op', lerp(1730, 1310, m), lerp(300, 200, m), lerp(84, 70, m), 1, {side: m < .5 ? 'below' : 'none', theme: 'light', nameSize: 44});
   // DeepSeek 从右侧冲进来追赶，带速度线；说到「追上吗」冒问号
   const u = seg(t, EV.chase + 1.0, EV.chase + 1.9);
   const dx = lerp(700, 0, eOut(u, 3));
@@ -76,8 +76,8 @@ function guessNums(ctx, t, a, b) {
 VIS[203] = (ctx, t, s) => {
   bgLight(ctx, t);
   xuanyunCard(ctx, t, {cx: 820, cy: 450, scale: .78, ry: -16, rx: 3, b: s.start, dOut: .5});
-  mvStack(ctx, t, {aIn: EV.stack - .3});
-  guessNums(ctx, t, EV.stack, null);
+  mvStack(ctx, t, {aIn: EV.guess + .25});
+  guessNums(ctx, t, EV.guess + .45, null);
   hostMorph(ctx, t, 1);
 };
 
@@ -109,7 +109,7 @@ VIS[204] = (ctx, t, s) => {
 function revealBadges(ctx, t, {compact = 0, pulse = {}} = {}) {
   MV_ROWS.forEach((r, i) => {
     const u = seg(t, EV.reveal + i * .14, EV.reveal + i * .14 + .5); if (u <= 0) return;
-    const x = lerp(1440, 1180, eOut(u, 4)), y = MV_CARD.ys[i];
+    const x = lerp(1440, 1195, eOut(u, 4)), y = MV_CARD.ys[i];
     const pk = pulse[r.m] ? Math.max(0, 1 - Math.abs(t - pulse[r.m] - .25) / .45) : 0;
     const s = 1 + .14 * pk;
     const showName = 1 - compact;
@@ -129,17 +129,17 @@ VIS[205] = (ctx, t, s) => {
 function dataTable(ctx, t) {
   const D0 = X.data.mv;
   const cols = [{x: 1360, ev: 'data_time', f: d => d[0], low: true}, {x: 1575, ev: 'data_in', f: d => d[1] + 'M', low: false}, {x: 1790, ev: 'data_cost', f: d => '¥' + d[2], low: true}];
-  const icons = ['⏱', 'TOKEN', '¥'];
+  const icons = ['用时', 'Token', '金额'];
   cols.forEach((c, j) => {
     const u = seg(t, EV[c.ev] + (j === 1 ? .35 : 0), EV[c.ev] + (j === 1 ? .35 : 0) + .45); if (u <= 0) return;
     // 列头图标（大）
-    ctx.save(); ctx.globalAlpha = clamp(u * 2, 0, 1); ctx.font = (j === 1 ? '40px Num' : '52px Black'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#8a909c';
-    ctx.fillText(icons[j], c.x, 62); ctx.restore();
+    ctx.save(); ctx.globalAlpha *= clamp(u * 2, 0, 1); ctx.font = '50px Black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#8a909c';
+    ctx.fillText(icons[j], c.x, 40); ctx.restore();
     MV_ROWS.forEach((r, i) => {
       const uu = seg(t, EV[c.ev] + i * .1 + (j === 1 ? .35 : 0), EV[c.ev] + i * .1 + (j === 1 ? .35 : 0) + .5); if (uu <= 0) return;
       const isLow = c.low && r.m === 'ds' && t > EV.lowest;
       const lk = isLow ? seg(t, EV.lowest, EV.lowest + .35) : 0;
-      ctx.save(); ctx.globalAlpha = clamp(uu * 3, 0, 1);
+      ctx.save(); ctx.globalAlpha *= clamp(uu * 3, 0, 1);
       ctx.translate(c.x, MV_CARD.ys[i] + (1 - eOut(uu)) * 40); const sc = 1 + .12 * lk; ctx.scale(sc, sc);
       if (lk > 0) { rr(ctx, -100, -50, 200, 100, 24); ctx.fillStyle = `rgba(22,190,120,${.16 * lk})`; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = `rgba(22,170,110,${lk})`; ctx.stroke(); }
       ctx.font = '76px Num'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -159,7 +159,7 @@ VIS[206] = (ctx, t, s) => {
   dataTable(ctx, t);
   ctx.restore();
   mvStack(ctx, t, {focus: fk > 0 ? 2 : -1, focusK: fk});
-  if (fk > .5) badge(ctx, 'ds', 1620, 190, 80, seg(fk, .5, 1), {side: 'below', theme: 'light', nameSize: 46});
+  if (fk > .5) badge(ctx, 'ds', 1690, 230, 80, seg(fk, .5, 1), {side: 'below', theme: 'light', nameSize: 46});
   hostMorph(ctx, t, 1);
   const uo = seg(t, s.end - .3, s.end); if (uo > 0) E.whip(ctx, uo);
 };

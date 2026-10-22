@@ -54,7 +54,7 @@ SFX = [
     S('pop', EV['opus_domain'], -10),
     S('whoosh_swipe', EV['chase'] + .95, -9),
     S('pop_cartoon', EV['ds_q'] - .05, -6),
-    S('whoosh_swipe', EV['stack'] - .35, -10), S('pop', EV['stack'] - .1, -14), S('pop', EV['stack'] + .08, -14), S('pop', EV['stack'] + .26, -14),
+    S('whoosh_swipe', EV['guess'] + .2, -10), S('pop', EV['guess'] + .45, -14), S('pop', EV['guess'] + .63, -14), S('pop', EV['guess'] + .81, -14),
     S('drumroll', EV['count'] - 1.75, -16),
     S('tick', EV['count'], -10, dur=.25), S('tick', EV['count'] + 1, -10, dur=.25), S('tick', EV['count'] + 2, -10, dur=.25),
     S('impact', EV['reveal'], -6), S('sparkle_star', EV['reveal'] + .05, -16, dur=1.5),

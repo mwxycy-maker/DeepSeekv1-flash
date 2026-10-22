@@ -1,1 +1,1 @@
-window.ASSETS = ["car_astra.png", "car_ds.png", "liangsheng.png", "logo_claude.png", "logo_ds.png", "logo_dsh.png", "logo_gpt.png", "余额.png", "修复dsh.png", "建模参考图.png", "开放自研API.png", "消耗1.png", "消耗2.png", "自反馈学习.png", "雷峰塔思考.png"];
+window.ASSETS = ["car_astra.png", "car_ds.png", "liangsheng.png", "logo_claude.png", "logo_ds.png", "logo_dsh.png", "logo_gpt.png", "task_game.jpg", "task_tower.jpg", "余额.png", "修复dsh.png", "建模参考图.png", "开放自研API.png", "消耗1.png", "消耗2.png", "自反馈学习.png", "雷峰塔思考.png"];

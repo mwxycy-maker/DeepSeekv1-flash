@@ -18,7 +18,7 @@ function tokenCard(ctx, t, a, b, cx, cy, value, dir, delay) {
     g.font = '44px Num'; g.fillStyle = '#4d6bfe'; g.textAlign = 'right'; g.fillText('TOKENS', x + w - 36, y + h / 2 + 30);
   }, {border: 6, bezel: 0, radius: 34, col: '#16181d'});
   const p1 = flyPose(ui, dir), p2 = exitPose(uo, dir);
-  E.persp(ctx, c, 760, 250, cx + p1.dx + p2.dx, cy + p1.dy + p2.dy, {scale: p1.s * p2.s, ry: -10 * dir + p1.ry + p2.ry, rx: 6 + p1.rx + p2.rx, rz: p1.rz + p2.rz, a: p1.a, radius: 34, n: 10});
+  E.persp(ctx, c, 760, 250, cx + p1.dx + p2.dx, cy + p1.dy + p2.dy, {scale: 1.22 * p1.s * p2.s, ry: -10 * dir + p1.ry + p2.ry, rx: 6 + p1.rx + p2.rx, rz: p1.rz + p2.rz, a: p1.a, radius: 34, n: 10});
 }
 
 VIS[101] = (ctx, t) => {
@@ -37,9 +37,9 @@ VIS[102] = (ctx, t, s) => {
     ctx.fillStyle = `rgba(6,8,14,${.42 * k})`; ctx.fillRect(0, 0, W, H);
   }
   const [x, y] = POS.ds_r;
-  badge(ctx, 'ds', x, y + floatY(t), 100, 1 - k * .7, {side: 'below', nameSize: 48});
-  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 360, 244589332, 1, 0);
-  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 650, 245891058, 1, .12);
+  badge(ctx, 'ds', x, y + floatY(t), 100, 1 - k, {side: 'below', nameSize: 48});
+  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 345, 244589332, 1, 0);
+  tokenCard(ctx, t, EV.tok, s.end - .35, 960, 680, 245891058, 1, .12);
 };
 
 VIS[103] = (ctx, t, s) => {
@@ -54,17 +54,17 @@ VIS[103] = (ctx, t, s) => {
 
 // 三项比拼：口播变形成左下角头像，三张窗口卡依次飞入（同一角度、同一方向）
 const TASKS = [
-  {key: 'task_tower', ev: 'task1', x: 470, src: () => ['tower_ds', 4]},
-  {key: 'task_game', ev: 'task2', x: 960, src: () => ['game_ds', 3]},
-  {key: 'task_mv', ev: 'task3', x: 1450, src: () => ['mv_op', 6]},
+  {key: 'task_tower', ev: 'task1', x: 400, src: ['tower_op', 2], img: 'task_tower'},
+  {key: 'task_game', ev: 'task2', x: 960, src: ['game_op', 2], img: 'task_game'},
+  {key: 'task_mv', ev: 'task3', x: 1520, src: ['mv_op', 6]},
 ];
 VIS[104] = (ctx, t, s) => {
   bgLight(ctx, t);
   const out = s.end - .45;
   TASKS.forEach((k, i) => {
-    const [key, off] = k.src();
-    windowCard(ctx, {t, key: k.key, cx: k.x, cy: 470, w: 450, h: 300, a: EV[k.ev] - .25, b: out + i * .05, dir: 1, ry: -16, rx: 4,
-      content: fillVideo(key in window.VSRC ? key : 'mv_op', off + Math.max(0, t - EV[k.ev]))});
+    const [key, off] = k.src;
+    windowCard(ctx, {t, key: k.key, cx: k.x, cy: 560, w: 540, h: 345, a: EV[k.ev] - .25, b: out + i * .05, dir: 1, ry: -16, rx: 4,
+      content: key in window.VSRC ? fillVideo(key, off + Math.max(0, t - EV[k.ev])) : (k.img ? fillImage(k.img, .5, .45) : fillVideo('mv_op', off))});
   });
   // 口播画面在镜头开头连续收缩进左下角圆窗；徽章跟着缩到上方
   const mu = seg(t, s.start, s.start + .75);
@@ -77,7 +77,7 @@ VIS[104] = (ctx, t, s) => {
   }
   // 三个徽章排在卡片上方一条线，表示同一提示词同台
   const bi = seg(t, s.start + .3, s.start + .8);
-  ['ds', 'gpt', 'op'].forEach((m, i) => badge(ctx, m, 760 + i * 200, 180, 62, bi * (1 - seg(t, out, out + .3)), {side: 'none', s: backOut(bi, 2)}));
+  ['ds', 'gpt', 'op'].forEach((m, i) => badge(ctx, m, 760 + i * 200, 250, 66, bi * (1 - seg(t, out, out + .3)), {side: 'none', s: backOut(bi, 2)}));
 };
 
 // VS 对决：左右两半从两侧撞进来，中间闪电；口播停顿处 VS 重击
@@ -111,8 +111,8 @@ VIS[105] = (ctx, t, s) => {
   const gr = ctx.createLinearGradient(W, 0, 900, H); gr.addColorStop(0, '#3a1408'); gr.addColorStop(1, '#a8401c');
   ctx.fillStyle = gr; ctx.fillRect(880 + off, 0, 1100, H);
   dotGrid(ctx, [255, 170, 120], .16);
-  badge(ctx, 'gpt', 1290 + off, 330 + floatY(t, 1), 118, 1, {side: 'right', nameSize: 58});
-  badge(ctx, 'op', 1260 + off, 650 + floatY(t, 2), 118, 1, {side: 'right', nameSize: 58});
+  badge(ctx, 'gpt', 1360 + off, 320 + floatY(t, 1), 112, 1, {side: 'right', nameSize: 52});
+  badge(ctx, 'op', 1330 + off, 660 + floatY(t, 2), 112, 1, {side: 'right', nameSize: 52});
   ctx.restore();
   // 中间闪电，碰撞瞬间与重击时更亮
   const hitK = Math.max(0, 1 - Math.abs(t - EV.vs_hit) / .5);
@@ -123,8 +123,8 @@ VIS[105] = (ctx, t, s) => {
   if (va > 0) {
     const slam = seg(t, EV.vs_end - .55, EV.vs_end - .35);
     const sc = lerp(2.2, 1, eOut(va, 5)) * (1 + .18 * Math.sin(Math.PI * slam));
-    ctx.save(); ctx.translate(960, 500); ctx.scale(sc, sc); ctx.rotate(-.08);
-    ctx.font = '300px Title'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.save(); ctx.translate(955, 500); ctx.scale(sc, sc); ctx.rotate(-.08);
+    ctx.font = '250px Title'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round'; ctx.lineWidth = 34; ctx.strokeStyle = '#0a0c12'; ctx.strokeText('VS', 0, 0);
     ctx.shadowColor = 'rgba(160,200,255,.95)'; ctx.shadowBlur = 50; ctx.fillStyle = '#fff'; ctx.fillText('VS', 0, 0);
     ctx.restore();

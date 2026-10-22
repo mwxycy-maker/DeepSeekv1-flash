@@ -60,15 +60,15 @@ INIT = r"""
     if (C.first && C.orbit && !C.locked) { lockCam(C.first); C.locked = true; }
     if (C.first && C.orbit && cam === C.first) place(C.first);
   }
-  // 每帧开头也摆一次，保证反射、阴影等先于主画面渲染的通道用的是同一个机位
-  const rAF = window.requestAnimationFrame.bind(window);
-  window.requestAnimationFrame = cb => rAF(ts => {
-    try {
-      if (!C.first && window.__CAM_EXPR) { const c = (0, eval)(window.__CAM_EXPR); if (c && c.isCamera) { C.first = c; C.pose = {pos: [c.position.x, c.position.y, c.position.z], fov: c.fov, viaApi: true}; } }
-      if (C.first && C.orbit) { if (!C.locked) { lockCam(C.first); C.locked = true; } place(C.first); }
-    } catch (e) {}
-    return cb(ts);
-  });
+  // 每个录制帧只渲染一次：rAF 改成按录制帧率的定时器（定时器由假时钟推进），并锁定不让假时钟覆盖
+  const FPS = window.__REC_FPS || 24;
+  let rid = 0; const pending = new Map();
+  const myRAF = cb => { const id = ++rid; pending.set(id, setTimeout(() => { pending.delete(id); try { if (C.first && C.orbit) place(C.first); } catch (e) {} cb(performance.now()); }, 1000 / FPS - 1)); return id; };
+  const myCAF = id => { const h = pending.get(id); if (h != null) { clearTimeout(h); pending.delete(id); } };
+  if (window.__REC_RAF) try {
+    Object.defineProperty(window, 'requestAnimationFrame', {get: () => myRAF, set: () => {}, configurable: false});
+    Object.defineProperty(window, 'cancelAnimationFrame', {get: () => myCAF, set: () => {}, configurable: false});
+  } catch (e) {}
   function wrap(obj) {
     if (!obj || obj.__recWrapped || typeof obj.render !== 'function') return;
     const orig = obj.render; obj.__recWrapped = true;
@@ -121,8 +121,9 @@ async def run(name, probe=False):
         pg.on('pageerror', lambda e: print('  PAGEERR', str(e)[:160]))
         await pg.route(re.compile(r'https?://(cdn\.jsdelivr\.net|unpkg\.com)/.*'), route_cdn)
         await pg.route(re.compile(r'https?://fonts\.(googleapis|gstatic)\.com/.*'), lambda r: r.fulfill(status=200, body=''))
-        await pg.add_init_script('window.__HIDE_UI=%s;window.__EXTRA_CSS=%s;window.__ALLOW_ORTHO=%s;window.__CAM_EXPR=%s;' % (json.dumps(c.get('hide_ui', True)), json.dumps(c.get('css', '')), json.dumps(c.get('ortho', False)), json.dumps(c.get('cam', ''))) + INIT)
+        await pg.add_init_script('window.__HIDE_UI=%s;window.__EXTRA_CSS=%s;window.__ALLOW_ORTHO=%s;window.__CAM_EXPR=%s;window.__REC_FPS=%d;' % (json.dumps(c.get('hide_ui', True)), json.dumps(c.get('css', '')), json.dumps(c.get('ortho', False)), json.dumps(c.get('cam', '')), fps) + INIT)
         await pg.clock.install(time=1_700_000_000_000)
+        await pg.clock.pause_at(1_700_000_000_050)
         import unicodedata
         fpath = next(p for p in SRC.glob('*/*.html') if unicodedata.normalize('NFC', str(p.relative_to(SRC))) == unicodedata.normalize('NFC', c['file']))
         await pg.goto(fpath.as_uri(), wait_until='load', timeout=120000)

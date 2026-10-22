@@ -140,7 +140,7 @@ EV = {k: round(v, 3) for k, v in EV.items()}
 
 # ---------------------------------------------------------------- 素材
 SOURCES = {
-    'aroll_a': 'media/aroll_a.mp4', 'aroll_b': 'media/aroll_b.mp4', 'person_a': 'media/person_a.mp4', 'person_b': 'media/person_b.mp4',
+    'aroll_a': 'media/aroll_a.mp4', 'aroll_b': 'media/aroll_b.mp4', 'person_a': 'media/person_a.mp4', 'person_b': 'media/person_b.mp4', 'person_c': 'media/person_c.mp4',
     'login_acc': 'media/login_acc.mp4', 'login_api': 'media/login_api.mp4', 'codex': 'media/codex.mp4',
     'xuanyun': 'media/xuanyun.mp4',
     'mv_gpt': 'media/mv_gpt.mp4', 'mv_op': 'media/mv_op.mp4', 'mv_ds': 'media/mv_ds.mp4',

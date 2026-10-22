@@ -45,12 +45,13 @@ VIS[1101] = (ctx, t, s) => { bgLight(ctx, t); hostMorph(ctx, t, 1 - seg(t, s.sta
 // 推荐方案：DeepSeek → DeepSeek Harness（箭头连接）
 VIS[1102] = (ctx, t, s) => {
   aroll(ctx, t);
-  badgePop(ctx, t, 'ds', 300, 360, 96, EV.dsh_ds, null, {side: 'below', nameSize: 44});
   const ai = seg(t, EV.dsh_in - .2, EV.dsh_in + .3);
   if (ai > 0) {
     ctx.save(); ctx.globalAlpha = ai; ctx.setLineDash([18, 14]); ctx.lineDashOffset = -t * 60;
     E.line(ctx, [[420, 360], [lerp(420, 1460, eOut(ai)), 360]], [255, 255, 255], 1, 6); ctx.restore();
+    personCut(ctx, t, 'person_c', 246.0);          // 虚线从人身后穿过（阿亮）：抠像人物盖回最上层
   }
+  badgePop(ctx, t, 'ds', 300, 360, 96, EV.dsh_ds, null, {side: 'below', nameSize: 44});   // 徽章在人前面（两侧，不挡人）
   badgePop(ctx, t, 'dsh', 1600, 360, 110, EV.dsh_in, null, {side: 'below', nameSize: 46});
   const all = Math.max(0, 1 - Math.abs(t - EV.dsh_all - .3) / .5);
   if (all > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = all * .6; E.ring(ctx, 1600, 360, 140 + 30 * all, [140, 170, 255], 1, 8); ctx.restore(); }

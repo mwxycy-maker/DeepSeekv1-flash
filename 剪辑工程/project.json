@@ -14,6 +14,7 @@
   "mv_gpt": "media/mv_gpt.mp4",
   "mv_op": "media/mv_op.mp4",
   "mv_ds": "media/mv_ds.mp4",
+  "coast_ds": "media/demo/coast_ds.mp4",
   "coast_gpt": "media/demo/coast_gpt.mp4",
   "coast_op": "media/demo/coast_op.mp4",
   "game_ds": "media/demo/game_ds.mp4",
@@ -313,12 +314,12 @@
   {
    "i": 1302,
    "start": 342.872,
-   "end": 344.812,
+   "end": 347.572,
    "text": "搜索API 文字特写"
   },
   {
    "i": 1303,
-   "start": 344.812,
+   "start": 347.572,
    "end": 355.732,
    "text": "搜索API 拉 狠拉"
   },
@@ -1407,13 +1408,13 @@
   [
    344.852,
    "不过这个东西对普通人好像没什么用",
-   1303,
+   1302,
    347.542
   ],
   [
    347.552,
    "它是给开发者用的",
-   1303,
+   1302,
    349.162
   ],
   [

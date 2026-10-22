@@ -166,31 +166,33 @@ VIS[1001] = (ctx, t, s) => {
   ctx.textAlign = 'right'; ctx.fillStyle = lv > .95 ? '#8ea2ff' : 'rgba(255,255,255,.35)'; ctx.fillText('MAX', x0 + w, y0 - 50);
   ctx.restore();
 };
-// 思考截图：大窗口，镜头沿着思考过程往下走，说到哪条亮哪条
-const THINK = {iw: 1866, ih: 1322};
-const THINK_HL = [{ev: 'think_run', y: [190, 236], col: [255, 190, 60]}, {ev: 'think_find', y: [540, 630], col: [255, 120, 90]},
-  {ev: 'think_fix', y: [720, 815], col: [46, 204, 212]}, {ev: 'think_fix', y: [900, 1000], col: [46, 204, 212], d: .6}, {ev: 'think_out', y: [1270, 1322], col: [22, 190, 120]}];
+// 思考截图：整页左右完整展示（不裁行），页面占比大；镜头只上下移动，说到哪段亮哪段（「已完成…50秒」不标）
+const THINK = {iw: 1866, ih: 1322, x0: 118, x1: 1742};            // 截图里文字的左右范围（逐行测得 148–1712，留边）
+const THINK_HL = [{ev: 'think_find', y: [540, 626], col: [255, 120, 90]},
+  {ev: 'think_fix', y: [724, 810], col: [46, 204, 212]}, {ev: 'think_fix', y: [908, 994], col: [46, 204, 212], d: .6}, {ev: 'think_out', y: [1276, 1315], col: [22, 190, 120]}];
 VIS[1005] = (ctx, t, s) => {
   bgLight(ctx, t);
-  const ui = seg(t, EV.think_in, EV.think_in + .7); const k = eOut(ui, 4);
-  const w = THINK.iw * 1.5, h = w * THINK.ih / THINK.iw;   // 放大 1.5 倍，只看每行开头（字够大）
-  // 镜头：从上往下平移（卡片在窗口里上移）
-  const pan = keyed(t, [[0, {y: 0}], [EV.think_find - .3, {y: .28}], [EV.think_fix, {y: .5}], [EV.think_done, {y: .78}]], 1.0).y;
-  const view = {x: 1030, y: 520, w: 1560, h: 900};
-  ctx.save(); rr(ctx, view.x - view.w / 2, view.y - view.h / 2 + (1 - k) * 60, view.w, view.h, 30);
-  ctx.globalAlpha = clamp(ui * 2, 0, 1);
-  ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; ctx.fillStyle = '#16181d'; ctx.fill(); ctx.shadowColor = 'transparent';
+  const ui = seg(t, EV.think_in, EV.think_in + .8); const k = eOut(ui, 4);
+  const view = {x: 1020, y: 520, w: 1720, h: 960};
+  const cw = THINK.x1 - THINK.x0, sc = (view.w - 40) / cw;           // 文字整行放进窗口
+  const h = THINK.ih * sc;
+  // 镜头：从上往下平移（跟着说到的段落）
+  const pan = keyed(t, [[0, {y: 0}], [EV.think_find - .3, {y: .3}], [EV.think_fix, {y: .5}], [EV.think_done, {y: .78}]], 1.1).y;
+  const vy = view.y - view.h / 2 + (1 - k) * 60;
+  ctx.save(); ctx.globalAlpha = clamp(ui * 2, 0, 1);
+  rr(ctx, view.x - view.w / 2, vy, view.w, view.h, 30);
+  ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; ctx.fillStyle = '#1c1c1e'; ctx.fill(); ctx.shadowColor = 'transparent';
   ctx.clip();
   const im = E.img('雷峰塔思考');
-  const top = view.y - view.h / 2 + 20 + (1 - k) * 60 - pan * (h - view.h + 40);
-  const left = view.x - view.w / 2 - 120 * 1.5 + 30;
-  if (E.ready(im)) ctx.drawImage(im, left, top, w, h);
-  const sc = w / THINK.iw;
+  const top = vy + 20 - pan * (h - view.h + 40), left = view.x - view.w / 2 + 20;
+  if (E.ready(im)) ctx.drawImage(im, THINK.x0, 0, cw, THINK.ih, left, top, cw * sc, h);
   for (const hl of THINK_HL) {
-    const u = seg(t, EV[hl.ev] + (hl.d || 0), EV[hl.ev] + (hl.d || 0) + .6); if (u <= 0) continue;
-    const y0 = top + hl.y[0] * sc, y1 = top + hl.y[1] * sc, x0 = left + 140 * sc;
-    E.hlBar(ctx, x0, y0, view.x + view.w / 2, y1, u, hl.col, .5);
+    const u = seg(t, EV[hl.ev] + (hl.d || 0), EV[hl.ev] + (hl.d || 0) + .7); if (u <= 0) continue;
+    const y0 = top + hl.y[0] * sc, y1 = top + hl.y[1] * sc;
+    E.hlBar(ctx, left + (148 - THINK.x0 - 10) * sc, y0, left + (1716 - THINK.x0) * sc, y1, u, hl.col, .5);
   }
   ctx.restore();
-  hostMorph(ctx, t, seg(t, s.start, s.start + .7));
+  // 页面占满画面时，左下角头像淡出，不压字；镜头末尾再淡回来接下一镜
+  const ha = 1 - seg(t, EV.think_in + .3, EV.think_in + .8) * (1 - seg(t, s.end - .5, s.end));
+  ctx.save(); ctx.globalAlpha = ha; hostMorph(ctx, t, seg(t, s.start, s.start + .7)); ctx.restore();
 };

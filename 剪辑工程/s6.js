@@ -13,17 +13,16 @@ function demoContent(key, t, cuts) {
     let i = 0; for (let k = 0; k < cuts.length; k++) if (t >= cuts[k].at) i = k;
     const c = cuts[i], p = cuts[Math.max(0, i - 1)];
     const ts = c.src + Math.max(0, t - c.at) * (c.rate == null ? 1 : c.rate);
-    const v = E.video(key, ts); if (!E.ready(v)) return;
-    // 放大位置在切点后 0.45 秒内平滑过渡
-    const u = i === 0 ? 1 : eInOut(seg(t, c.at, c.at + .45));
+    const v = E.video(key, ts, c.rate == null ? 1 : c.rate); if (!E.ready(v)) return;   // 倍速要传给播放器，否则网页预览时会被反复拉回（一闪一闪）
+    // 放大位置在切点后 0.7 秒内平滑过渡（阿亮：运镜不要太快）
+    const u = i === 0 ? 1 : eInOut(seg(t, c.at, c.at + .7));
     const z = lerp(p.z || 1, c.z || 1, u), fx = lerp(p.fx == null ? .5 : p.fx, c.fx == null ? .5 : c.fx, u), fy = lerp(p.fy == null ? .5 : p.fy, c.fy == null ? .5 : c.fy, u);
     const cw = DEMO.vw / z, ch = DEMO.vh / z;
     const sx = clamp(fx * DEMO.vw - cw / 2, 0, DEMO.vw - cw), sy = clamp(fy * DEMO.vh - ch / 2, 0, DEMO.vh - ch);
     g.drawImage(v, sx, sy, cw, ch, x, y, w, h);
-    // 跳切时一闪
-    if (i > 0 && t - c.at < .12) { g.fillStyle = `rgba(255,255,255,${.35 * (1 - (t - c.at) / .12)})`; g.fillRect(x, y, w, h); }
+    // 跳切不加白闪（阿亮：不要一闪一闪的）
     if (c.hl) {
-      const k = seg(t, c.at + .25, c.at + .6);
+      const k = seg(t, c.at + .25, c.at + .6) * (c.hlEnd == null ? 1 : 1 - seg(t, c.at + c.hlEnd, c.at + c.hlEnd + .25));
       if (k > 0) {
         const mx = px => x + (px - sx) * w / cw, my = py => y + (py - sy) * h / ch;
         const [x0, y0, x1, y1] = c.hl, pad = 8;
@@ -102,27 +101,24 @@ VIS[1106] = (ctx, t, s) => {
   demoCard(ctx, t, 'login_api', CK_CUTS(), {key: 'demo_api2', a: s.start - .05});
   hostMorph(ctx, t, seg(t, s.start, s.start + .7));
 };
-// Codex：CC Switch 里加 DeepSeek → 填 Key → 管理与测速 → 保存 → 启用 → Codex 里选模型
+// Codex：先纯 A-roll，说到「配置起来也非常简单」再进录屏（阿亮）；不推近，只高亮（框已逐个对过素材帧）
 const CX_CUTS = () => [
-  {at: EV.cx_in, src: .2, rate: .3},
-  {at: EV.cx_codex, src: .5, rate: .3, z: 1.8, fx: .08, fy: .2, hl: [8, 97, 74, 113]},
-  {at: EV.cx_cc, src: .8, rate: .3, z: 1.8, fx: .08, fy: .15, hl: [8, 55, 102, 71]},
-  {at: EV.cx_switch, src: 1.1, rate: .3, z: 1.8, fx: .08, fy: .08, hl: [8, 23, 92, 43]},
   {at: EV.cx_easy, src: 1.6, rate: 1},
-  {at: EV.cx_gpt, src: 3.3, z: 1.3, fx: .7, fy: .35, hl: [508, 151, 710, 191]},
-  {at: EV.cx_key, src: 8.6, z: 1.5, fx: .45, fy: .35, hl: [299, 152, 503, 189]},
-  {at: EV.cx_paste, src: 13.4, z: 1.5, fx: .55, fy: .55, hl: [164, 256, 715, 281]},
-  {at: EV.cx_test, src: 16.6, z: 1.5, fx: .85, fy: .62, hl: [654, 298, 717, 314]},
-  {at: EV.cx_run, src: 20.2, z: 1.5, fx: .7, fy: .22, hl: [625, 75, 698, 96]},
-  {at: EV.cx_save, src: 22.6, z: 1.4, fx: .9, fy: .9, hl: [661, 450, 721, 472]},
-  {at: EV.cx_back, src: 27.2, z: 1.4, fx: .7, fy: .3, hl: [626, 147, 661, 167]},
-  {at: EV.cx_model, src: 35.2, z: 1.6, fx: .72, fy: .85, hl: [466, 396, 644, 414]},
+  {at: EV.cx_gpt, src: 3.3, hl: [508, 151, 710, 191]},
+  {at: EV.cx_key, src: 8.6, hl: [299, 152, 503, 189]},
+  {at: EV.cx_paste, src: 13.4, hl: [164, 256, 715, 281]},
+  {at: EV.cx_test, src: 16.6, hl: [654, 298, 717, 314]},
+  {at: EV.cx_run, src: 20.2, hl: [625, 75, 698, 96]},
+  {at: EV.cx_save, src: 22.6, hl: [661, 450, 721, 472]},
+  {at: EV.cx_back, src: 27.2, hl: [626, 147, 661, 167]},
+  {at: EV.cx_model, src: 35.2, hl: [466, 396, 644, 414], hlEnd: .95},   // 下拉框 1 秒后关掉，高亮跟着收
 ];
 VIS[1107] = (ctx, t, s) => {
   bgLight(ctx, t);
   demoCard(ctx, t, 'login_api', CK_CUTS(), {key: 'demo_api2', b: s.start - .02, dOut: .35});
-  demoCard(ctx, t, 'codex', CX_CUTS(), {a: s.start + .05});
-  hostMorph(ctx, t, 1);
+  demoCard(ctx, t, 'codex', CX_CUTS(), {a: EV.cx_easy + .05});
+  // 头像：先放大回全屏口播，「配置起来也非常简单」时再缩回左下角
+  hostMorph(ctx, t, Math.max(1 - seg(t, s.start + .05, s.start + .75), seg(t, EV.cx_easy - .15, EV.cx_easy + .55)));
 };
 // 其他产品：名字徽章（没有 logo），连到 DeepSeek
 function namePill(ctx, text, x, y, a, s = 1, col = [77, 107, 254]) {
@@ -208,7 +204,7 @@ VIS[1302] = (ctx, t, s) => {
   if (u > 0) { g.fillStyle = 'rgba(46,204,212,.55)'; g.fillRect(28 * sc, 18 * sc, (160 * sc) * eOut(u, 3), 26 * sc); }
   const im = E.img('开放自研API'); if (E.ready(im)) { g.globalCompositeOperation = 'multiply'; g.drawImage(im, 0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; }
   const k = eOut(ui, 4), push = lerp(1, 1.1, eInOut(seg(t, EV.api_in, s.end)));
-  E.persp(ctx, c, c.width, c.height, 1080, 600, {scale: lerp(.8, 1, k) * push, ry: lerp(-24, -10, k), rx: lerp(18, 12, k), rz: -3, a: clamp(ui * 2, 0, 1) * (1 - uo), radius: 18, shadowK: .4, n: 14});
+  E.persp(ctx, c, c.width, c.height, 1080, 545, {scale: lerp(.8, 1, k) * push, ry: lerp(-24, -10, k), rx: lerp(18, 12, k), rz: -3, a: clamp(ui * 2, 0, 1) * (1 - uo), radius: 18, shadowK: .4, n: 14});
   hostMorph(ctx, t, seg(t, s.start, s.start + .7));
 };
 // 人物后景花字：左边一个字，右边两个字（头在中间不挡字）

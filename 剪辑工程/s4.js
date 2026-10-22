@@ -7,7 +7,7 @@ const COAST_KEY = {gpt: 'coast_gpt', op: 'coast_op', ds: 'coast_ds'};
 const PROMPT = '给我做个实时海岸模拟，要求极度真实，要做的完美。';
 function coastContent(i, t) { const m = P3.order[i]; return fillZoom(COAST_KEY[m], .2 + Math.max(0, t - EV.coast_in), 1, .5, .5); }
 // 提示词出现时，三景整体缩小下移，提示词放在上方
-function coastLayout(t) { const k = eInOut(seg(t, EV.prompt_in, EV.prompt_in + .7)); return {dx: lerp(0, 60, k), dy: lerp(0, 105, k), s: lerp(1, .8, k)}; }
+function coastLayout(t) { const k = eInOut(seg(t, EV.prompt_in, EV.prompt_in + .7)); return {dx: lerp(0, 60, k), dy: lerp(0, 92, k), s: lerp(1, .86, k)}; }
 function promptCard(ctx, t) {
   const ui = seg(t, EV.prompt_in + .2, EV.prompt_in + .8); if (ui <= 0) return;
   const k = eOut(ui, 4);
@@ -34,15 +34,16 @@ function promptCard(ctx, t) {
 }
 VIS[601] = (ctx, t, s) => {
   bgLight(ctx, t);
-  triPanels(ctx, t, {kind: 'cs', aIn: EV.coast_in, aOut: EV.pua - .3, content: coastContent, layout: coastLayout});
+  triPanels(ctx, t, {kind: 'cs', aIn: EV.coast_in, aOut: EV.pua - .55, content: coastContent, layout: coastLayout});
   promptCard(ctx, t);
-  hostMorph(ctx, t, seg(t, s.start, s.start + .7));
+  // 三景退场的同时，头像已经开始放大回全屏（不留空画面）
+  hostMorph(ctx, t, seg(t, s.start, s.start + .7) * (1 - eInOut(seg(t, EV.pua - .45, EV.pua + .2))));
 };
 // 「是不是像极了你那个贼会 PUA 的老板」：回到口播，说到 PUA 时猛推一下
 VIS[605] = (ctx, t, s) => {
   bgLight(ctx, t);
   const z = 1 + .14 * eOut(seg(t, EV.pua_hit - .05, EV.pua_hit + .2), 3);
-  const u = 1 - seg(t, s.start, s.start + .6);
+  const u = 1 - eInOut(seg(t, EV.pua - .45, EV.pua + .2));
   if (u > 0) hostMorph(ctx, t, u);
   else aroll(ctx, t, {zoom: z, fx: .5, fy: .28});
   if (t > EV.pua_hit) E.shake(ctx, Math.max(0, 1 - (t - EV.pua_hit) / .3) * .6, Math.floor(t * 30));

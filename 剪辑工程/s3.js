@@ -52,7 +52,7 @@ function triPanels(ctx, t, o) {
     if (!M) return;
     const ui = seg(t, a + .3, a + .8), uo = o.aOut == null ? 0 : seg(t, o.aOut, o.aOut + .4);
     const [bx, by] = E.mapPt(M, 62, 62);
-    badge(g, m, bx, by, 40 * s, clamp(ui * 2, 0, 1) * (1 - uo) * alpha, {side: 'right', nameSize: 30, s: 1});
+    badge(g, m, bx, by, 40 * s, clamp(ui * 2, 0, 1) * (1 - uo) * alpha, {side: 'right', nameSize: 26, s: 1});
     if (o.extra) o.extra(g, i, M, s);
   };
   if (F.k > 0) {

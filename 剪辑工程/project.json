@@ -14,6 +14,11 @@
   "mv_gpt": "media/mv_gpt.mp4",
   "mv_op": "media/mv_op.mp4",
   "mv_ds": "media/mv_ds.mp4",
+  "store_ds": "media/demo/store_ds.mp4",
+  "store_gpt": "media/demo/store_gpt.mp4",
+  "store_op": "media/demo/store_op.mp4",
+  "tower_ds": "media/demo/tower_ds.mp4",
+  "tower_gpt": "media/demo/tower_gpt.mp4",
   "tower_op": "media/demo/tower_op.mp4"
  },
  "images": [

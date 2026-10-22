@@ -192,7 +192,8 @@ function dataMark(ctx, M, w, h, d, a = 1) {
   const [qx, qy] = E.mapPt(M, w - 40 - 100, h - 40);
   const sc = clamp(Math.hypot(px - qx, py - qy) / 100, .35, 1.2);
   ctx.save(); ctx.globalAlpha *= a * .92; ctx.translate(px, py); ctx.scale(sc, sc);
-  ctx.font = '25px Black'; const tw = ctx.measureText(txt).width;
+  ctx.font = '25px Black'; let fs = 25, tw = ctx.measureText(txt).width;
+  const maxW = w - 80 - 28; if (tw > maxW) { fs = Math.max(14, 25 * maxW / tw); ctx.font = `${fs.toFixed(1)}px Black`; tw = ctx.measureText(txt).width; }
   rr(ctx, -tw - 28, -46, tw + 28, 42, 21); ctx.fillStyle = 'rgba(10,12,18,.58)'; ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(txt, -14, -25);
   ctx.restore();

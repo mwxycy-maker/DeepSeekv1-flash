@@ -19,13 +19,15 @@ function keyed(t, keys, dur = .6) {
   return cur;
 }
 // 放大到素材某处：z 倍，焦点 (fx, fy)
-function fillZoom(key, ts, z = 1, fx = .5, fy = .5) {
+function fillZoom(key, ts, z = 1, fx = .5, fy = .5, filter = '') {
   return (g, x, y, w, h) => {
     if (!(key in window.VSRC)) { g.fillStyle = '#1b1f29'; g.fillRect(x, y, w, h); return; }   // 素材还在录制
     const v = E.video(key, ts); if (!E.ready(v)) { g.fillStyle = '#1b1f29'; g.fillRect(x, y, w, h); return; }
     const [vw, vh] = E.sizeOf(v); const cw = vw / z, ch = vh / z;
     const cx = clamp(fx * vw - cw / 2, 0, vw - cw), cy = clamp(fy * vh - ch / 2, 0, vh - ch);
+    if (filter) { g.save(); g.filter = filter; }
     E.cover(g, v, x, y, w, h, .5, .5, [cx, cy, cw, ch]);
+    if (filter) g.restore();
   };
 }
 // focusOf(t) → {idx: 当前上前的画面, k: 0..1}
@@ -69,12 +71,15 @@ function triPanels(ctx, t, o) {
 
 // ---------------------------------------------------------------- 雷峰塔
 const TOWER_KEY = {gpt: 'tower_gpt', op: 'tower_op', ds: 'tower_ds'};
+// 三座塔在画面里的大小统一：录制时机位一致，这里按各自塔身占比补一个基础放大
+const TOWER_BASE = {gpt: {z: 1.45, fy: .5}, op: {z: 1.4, fy: .46}, ds: {z: 1.05, fy: .52}};
 function towerContent(i, t) {
   const m = P3.order[i], ts = .3 + Math.max(0, t - EV.towers) * TOWER_RATE;
+  const B = TOWER_BASE[m];
   let z = {z: 1, fx: .5, fy: .5};
   if (m === 'gpt') z = keyed(t, [[0, {z: 1, fx: .5, fy: .5}], [EV.gpt_detail, {z: 1.7, fx: .5, fy: .42}], [EV.gpt_back - .2, {z: 1, fx: .5, fy: .5}]], .7);
-  if (m === 'ds') z = keyed(t, [[0, {z: 1, fx: .5, fy: .5}], [EV.water, {z: 1.9, fx: .5, fy: .9}], [EV.fog, {z: 1.6, fx: .55, fy: .62}], [EV.mount, {z: 1.9, fx: .22, fy: .5}], [EV.whole, {z: 1, fx: .5, fy: .5}]], .55);
-  return fillZoom(TOWER_KEY[m], ts, z.z, z.fx, z.fy);
+  if (m === 'ds') z = keyed(t, [[0, {z: 1, fx: .5, fy: .5}], [EV.water, {z: 1.9, fx: .16, fy: .6}], [EV.fog, {z: 1.7, fx: .8, fy: .46}], [EV.mount, {z: 1.9, fx: .82, fy: .34}], [EV.whole, {z: 1, fx: .5, fy: .5}]], .55);
+  return fillZoom(TOWER_KEY[m], ts, z.z * B.z, z.fx, z.z > 1.01 ? z.fy : B.fy);
 }
 function markOf(kind) { const d = X.data[kind]; return Object.fromEntries(Object.keys(d).map(m => [m, {time: d[m][0], tok: d[m][1], cost: d[m][2]}])); }
 
@@ -96,6 +101,8 @@ VIS[302] = (ctx, t, s) => {
 
 // ---------------------------------------------------------------- 便利店
 const STORE_KEY = {gpt: 'store_gpt', op: 'store_op', ds: 'store_ds'};
+// 三家店铺占比统一（Opus 的地块本身更大）
+const STORE_BASE = {gpt: {z: 1.2, fx: .5, fy: .5}, op: {z: 1.0, fx: .5, fy: .5}, ds: {z: 1.25, fx: .5, fy: .5, filter: 'brightness(1.55) contrast(1.08) saturate(1.15)'}};
 function storeTs(m, t) {
   let ts = Math.max(0, t - EV.stores);
   if (m === 'gpt' && t >= EV.gpt_replay) ts = t - EV.gpt_replay;   // 回放：凭空出现
@@ -106,7 +113,8 @@ function storeContent(i, t) {
   const m = P3.order[i];
   let z = {z: 1, fx: .5, fy: .5};
   if (m === 'op') z = keyed(t, [[0, {z: 1, fx: .5, fy: .5}], [EV.op_lamp, {z: 1.8, fx: .5, fy: .52}], [EV.op_dark, {z: 2.4, fx: .5, fy: .54}], [EV.ds_front5 - .3, {z: 1, fx: .5, fy: .5}]], .6);
-  return fillZoom(STORE_KEY[m], storeTs(m, t), z.z, z.fx, z.fy);
+  const B = STORE_BASE[m];
+  return fillZoom(STORE_KEY[m], storeTs(m, t), z.z * B.z, z.z > 1.01 ? z.fx : B.fx, z.z > 1.01 ? z.fy : B.fy, B.filter || '');
 }
 function storeScene(ctx, t) {
   const spans = [[2, EV.ds_front4, EV.gpt_front4 - .35], [0, EV.gpt_front4, EV.op_front4 - .35], [1, EV.op_front4, EV.ds_front5 - .35], [2, EV.ds_front5, EV.stores_out - .1]];
@@ -127,7 +135,7 @@ function storeScene(ctx, t) {
       // 第一名：DeepSeek 画面右上角金色奖牌
       if (m === 'ds' && t > EV.first - .1) {
         const u = seg(t, EV.first - .1, EV.first + .35), uo = seg(t, EV.stores_out, EV.stores_out + .3);
-        const [mx, my] = E.mapPt(M, P3.w - 20, 30);
+        const [mx, my] = E.mapPt(M, P3.w - 40, 200);
         medal(g, mx, my, 92 * sc * backOut(u, 2.2) * (1 - uo), t);
       }
     }});

@@ -67,7 +67,7 @@ const LA_CUTS = () => [
 VIS[1103] = (ctx, t, s) => {
   bgLight(ctx, t);
   demoCard(ctx, t, 'login_acc', LA_CUTS(), {a: EV.la_in - .1});
-  hostMorph(ctx, t, seg(t, s.start, s.start + .7));
+  hostMorph(ctx, t, seg(t, EV.la_in - .35, EV.la_in + .35));     // 先纯 A-roll，说到「这里有两种接入方式」再缩到左下角
 };
 // 添加 API Key
 const AP_CUTS = () => [

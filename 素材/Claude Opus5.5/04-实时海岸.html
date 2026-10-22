@@ -1,0 +1,667 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>实时海岸</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600&text=%E5%AE%9E%E6%97%B6%E6%B5%B7%E5%B2%B8&display=swap">
+<style>
+/* Layout: full-bleed WebGL scene; a thin instrument strip top-left and a collapsible tide-log panel bottom-right. Single dark look by choice. */
+:root{
+  --glass: rgba(8,14,18,.58);
+  --glass-edge: rgba(190,215,220,.14);
+  --ink: #e9efee;
+  --ink-dim: #9fb1b2;
+  --sea: #7fd3c4;
+  --sun: #f1b27a;
+  --f-display: "Noto Serif SC","Songti SC","STSong",serif;
+  --f-body: -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --f-data: "IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme: dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:#05080a;color:var(--ink);font-family:var(--f-body)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas.drag{cursor:grabbing}
+.hud{position:fixed;inset:0;pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:calc(14px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.id{pointer-events:auto;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.id h1{font-family:var(--f-display);font-weight:600;font-size:22px;letter-spacing:.12em;margin:0}
+.id .meta{font-family:var(--f-data);font-size:11.5px;color:var(--ink-dim);letter-spacing:.04em}
+.id .clock{font-family:var(--f-data);font-size:13px;color:var(--sun);font-variant-numeric:tabular-nums}
+.hint{font-family:var(--f-data);font-size:11px;color:var(--ink-dim);opacity:.8;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.bottom{display:flex;justify-content:flex-end;align-items:flex-end;gap:10px}
+.panel{pointer-events:auto;width:min(330px,100%);background:var(--glass);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
+  border:1px solid var(--glass-edge);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 120px);overflow:auto}
+.panel[hidden]{display:none!important}
+.toggle{pointer-events:auto;font:500 12px var(--f-data);letter-spacing:.08em;color:var(--ink);background:var(--glass);border:1px solid var(--glass-edge);
+  border-radius:8px;padding:8px 12px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.sec{font:500 10.5px var(--f-data);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center}
+.row label{font-size:12.5px}
+.row output{font:12px var(--f-data);color:var(--sea);font-variant-numeric:tabular-nums}
+.row input{grid-column:1/-1;width:100%;margin:0;accent-color:var(--sea);height:18px}
+.views{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.btn{font:12px var(--f-body);color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--glass-edge);border-radius:6px;padding:6px 4px;cursor:pointer}
+.btn[aria-pressed="true"]{background:rgba(127,211,196,.18);border-color:rgba(127,211,196,.5);color:#dff7f2}
+.btn:focus-visible,.toggle:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.log{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:11.5px;color:var(--ink-dim);border-top:1px solid var(--glass-edge);padding-top:9px}
+.log b{font:500 11.5px var(--f-data);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+.err{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font-size:14px;color:var(--ink-dim)}
+@media (max-width:560px){.hint{display:none}.panel{max-height:52vh}}
+</style>
+
+<canvas id="c" aria-label="实时海岸三维模拟场景"></canvas>
+<div class="hud">
+  <div class="top">
+    <div class="id">
+      <h1>实时海岸</h1>
+      <div class="meta">北纬 34° · 海岸朝西 · 10月19日</div>
+      <div class="clock" id="clock">16:36 · 太阳高度 10.9°</div>
+    </div>
+    <div class="hint">拖动转视角 · WASD 行走 · Q/E 升降（航拍）</div>
+  </div>
+  <div class="bottom">
+    <button class="toggle" id="tgl" aria-expanded="true" aria-controls="panel">参数</button>
+    <div class="panel" id="panel">
+      <div class="sec">视角</div>
+      <div class="views" id="views">
+        <button class="btn" data-v="beach" aria-pressed="true">岸边</button>
+        <button class="btn" data-v="surf" aria-pressed="false">冲浪区</button>
+        <button class="btn" data-v="drone" aria-pressed="false">航拍</button>
+        <button class="btn" data-v="head" aria-pressed="false">岬角</button>
+      </div>
+      <div class="sec">环境</div>
+      <div class="row"><label for="hour">时刻</label><output id="o-hour">16:36</output><input type="range" id="hour" min="5.9" max="18.4" step="0.01" value="16.6"></div>
+      <div class="row"><label for="hs">有效波高 H<sub>s</sub></label><output id="o-hs">1.4 m</output><input type="range" id="hs" min="0.2" max="3.5" step="0.05" value="1.4"></div>
+      <div class="row"><label for="per">涌浪周期 T<sub>p</sub></label><output id="o-per">10.0 s</output><input type="range" id="per" min="5" max="16" step="0.1" value="10"></div>
+      <div class="row"><label for="wind">风速 U<sub>10</sub></label><output id="o-wind">6 m/s</output><input type="range" id="wind" min="0" max="20" step="0.5" value="6"></div>
+      <div class="row"><label for="cloud">云量</label><output id="o-cloud">35%</output><input type="range" id="cloud" min="0" max="1" step="0.01" value="0.35"></div>
+      <div class="acts">
+        <button class="btn" id="b-sound" aria-pressed="false">海浪声</button>
+        <button class="btn" id="b-flow" aria-pressed="false">时间流逝</button>
+        <button class="btn" id="b-pause" aria-pressed="false">暂停</button>
+      </div>
+      <div class="log">
+        <span>深水波长 L₀ = gT²/2π</span><b id="r-l0">156 m</b>
+        <span>破波水深 h<sub>b</sub> ≈ H/0.78</span><b id="r-hb">1.8 m</b>
+        <span>破波带宽度</span><b id="r-sz">40 m</b>
+        <span>破波处波速 √(gh<sub>b</sub>)</span><b id="r-c">4.2 m/s</b>
+        <span>渲染分辨率</span><b id="r-res">60%</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="fs" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+uniform vec2 uRes;
+uniform float uTime;
+uniform vec3 uRo, uFw, uRt, uUp;
+uniform vec3 uSun, uSunCol;
+uniform float uHs, uPer, uWind, uCloud, uHQ, uExp;
+out vec4 outColor;
+
+#define PI 3.14159265
+const float G = 9.81;
+const float SLOPE = 0.045;
+vec3 gAmb;
+
+float hash12(vec2 p){vec3 p3=fract(vec3(p.xyx)*.1031);p3+=dot(p3,p3.yzx+33.33);return fract((p3.x+p3.y)*p3.z);}
+float vnoise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
+  return mix(mix(hash12(i),hash12(i+vec2(1,0)),u.x),mix(hash12(i+vec2(0,1)),hash12(i+vec2(1,1)),u.x),u.y);}
+const mat2 M2 = mat2(1.6,1.2,-1.2,1.6);
+float fbm3(vec2 p){float a=.5,s=0.;for(int i=0;i<3;i++){s+=a*vnoise(p);p=M2*p;a*=.5;}return s/.875;}
+float fbm5(vec2 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*vnoise(p);p=M2*p;a*=.5;}return s/.96875;}
+
+/* ---------- bathymetry & land ---------- */
+float shoreD(vec2 p){return p.y+5.*sin(p.x*.011+.7)+2.5*sin(p.x*.031+2.1);}   // metres seaward of mean shoreline
+float barB(float d){float x=(d-42.)/10.;return .6*exp(-x*x);}                   // longshore sandbar
+float stillDepth(float d){return max(0.,d*SLOPE-barB(d));}
+
+float sandH(vec2 p){
+  float d=shoreD(p);
+  float h=-d*SLOPE+barB(d);
+  h+=(1.-smoothstep(-26.,-8.,d))*.9;                     // berm
+  if(d<-30.){
+    float dune=1.-smoothstep(-72.,-34.,d);
+    h+=dune*(1.8+3.4*fbm3(p*.018+4.));
+  }
+  return max(h,-18.);
+}
+float rocksH(vec2 p){
+  float h=-100.;
+  vec2 q=p-vec2(-230.,70.);
+  float r=length(q*vec2(1.,.55));
+  if(r<165.){
+    float m=1.-smoothstep(10.,160.,r);
+    h=38.*m*(.45+.75*fbm3(p*.03+7.))-5.;
+  }
+  vec2 c1=p-vec2(38.,4.);float l1=length(c1*vec2(1.,1.4));
+  if(l1<8.)h=max(h,2.6*(1.-smoothstep(.5,7.,l1))*(.55+.9*vnoise(p*.55))-.9);
+  vec2 c2=p-vec2(55.,15.);float l2=length(c2);
+  if(l2<6.)h=max(h,2.*(1.-smoothstep(.5,5.5,l2))*(.55+.9*vnoise(p*.7+3.))-1.1);
+  return h;
+}
+float terrainH(vec2 p){return max(sandH(p),rocksH(p));}
+
+/* ---------- waves ---------- */
+// one swell train: phase integrated through shoaling depth (c = sqrt(gh) on a planar slope),
+// Snell refraction via constant longshore wavenumber, depth-limited breaking (H/h = 0.78),
+// peaked shallow-water crests turning into a saw-tooth bore inside the surf zone.
+float swellC(vec2 p,float d,float dep,float T,float A,float th,float ph0,float t,out vec2 fo){
+  float w=2.*PI/T, k0=w*w/G;
+  float dd=max(d,0.);
+  float d0=G/(SLOPE*w*w);
+  float c1=2.*w/sqrt(G*SLOPE);
+  float psi= dd<d0 ? c1*sqrt(dd) : c1*sqrt(d0)+k0*(dd-d0);
+  float ph=psi+w*t+k0*sin(th)*p.x+ph0;
+  ph+=1.6*(vnoise(vec2(p.x*.017+ph0,dd*.004))-.5);
+  float env=.72+.28*sin(psi*.093+w*t*.093+p.x*.011+ph0*1.7);
+  float shoal=clamp(pow(max(dep,.4)/12.,-.25),.9,1.6);
+  float a=A*shoal*env;
+  float amax=.39*dep+.012;
+  float ratio=a/amax;
+  float surf=smoothstep(.85,1.4,ratio);
+  float brk=smoothstep(.7,1.,ratio);
+  a=min(a,amax);
+  float sharp=mix(1.6,5.5,1.-smoothstep(.8,8.,dep));
+  float s=.5+.5*cos(ph);
+  float shp=pow(s,sharp);
+  float u=fract(ph/(2.*PI));
+  float bore= u>.9 ? smoothstep(.9,1.,u) : pow(1.-u/.9,1.6);
+  float prof=mix(shp-.52*inversesqrt(sharp),bore-.4,surf);
+  float front=smoothstep(.84,.97,u)+(1.-smoothstep(0.,.22,u));
+  fo=vec2(surf*(front*1.2+pow(1.-u,2.5)*.7), brk*pow(s,10.)*(1.-surf));
+  return 2.*a*prof;
+}
+float swashLvl(vec2 p,float t,out float R){
+  float w=2.*PI/uPer, k0=w*w/G;
+  float ph=w*t+k0*sin(.17)*p.x+1.6*(vnoise(vec2(p.x*.017,0.))-.5);
+  float env=.72+.28*sin(w*t*.093+p.x*.011);
+  float u=fract(ph/(2.*PI));
+  R=(.22*uHs+.04)*env;
+  float up=1.-pow(1.-clamp(u/.24,0.,1.),2.);
+  float dn=1.-smoothstep(.24,1.,u);
+  return R*(u<.24?up:dn)-.06;
+}
+float waterH(vec2 p,float t,out vec2 fo){
+  float d=shoreD(p);
+  float dep=stillDepth(d);
+  vec2 f;fo=vec2(0.);
+  float h=0.;
+  h+=swellC(p,d,dep,uPer,uHs*.5,.17,0.,t,f);fo+=f;
+  h+=swellC(p,d,dep,uPer*.71,uHs*.2,-.33,2.1,t,f);fo+=f*.6;
+  h+=swellC(p,d,dep,uPer*1.31,uHs*.12,.04,4.3,t,f);fo+=f*.5;
+  if(uWind>.5){
+    float wa=.0016*uWind*uWind;
+    vec2 q=p*.16;float tt=t*(.25+uWind*.04);
+    float ws=(fbm3(q+vec2(.6,.8)*tt)-.5)+.5*(vnoise(q*2.3-vec2(.3,1.)*tt*1.6)-.5);
+    h+=wa*ws*smoothstep(0.,2.5,dep)*2.;
+  }
+  if(d<7.){
+    float R;float lv=swashLvl(p,t,R);
+    float sw=lv-.004*max(-d,0.);
+    float m=1.-smoothstep(1.,7.,d);
+    h=mix(h,max(h,sw),m);
+  }
+  return h;
+}
+
+float sceneH(vec2 p,float t){vec2 f;return max(terrainH(p),waterH(p,t,f));}
+
+bool march(vec3 ro,vec3 rd,out float tHit){
+  float t=.05,tp=t;
+  int N=uHQ>.5?240:150;
+  for(int i=0;i<260;i++){
+    if(i>=N)break;
+    vec3 p=ro+rd*t;
+    float hh=p.y-sceneH(p.xz,uTime);
+    if(hh<0.){
+      float a=tp,b=t;
+      for(int j=0;j<6;j++){float m=.5*(a+b);vec3 q=ro+rd*m;if(q.y-sceneH(q.xz,uTime)<0.)b=m;else a=m;}
+      tHit=.5*(a+b);return true;
+    }
+    if(p.y>48.&&rd.y>0.)break;
+    tp=t;
+    t+=clamp(hh*.45,.02+t*.004,6.+t*.05);
+    if(t>1200.)break;
+  }
+  return false;
+}
+
+/* ---------- sky ---------- */
+vec3 skyCol(vec3 rd){
+  float sh=uSun.y;
+  float y=max(rd.y,0.);
+  float mu=dot(rd,uSun);
+  float day=smoothstep(-.1,.3,sh);
+  vec3 zen=mix(vec3(.010,.014,.040),vec3(.045,.15,.46),day);
+  vec3 hor=mix(vec3(.05,.05,.08),vec3(.40,.55,.74),day);
+  float low=(1.-smoothstep(0.,.3,sh))*smoothstep(-.2,-.01,sh);
+  vec2 a=normalize(rd.xz+vec2(1e-4)),b=normalize(uSun.xz+vec2(1e-4));
+  float az=.5+.5*dot(a,b);
+  vec3 warm=vec3(1.,.44,.18)*(.1+1.05*az*az*az)*mix(.35,1.,smoothstep(-.12,.0,sh));
+  hor=mix(hor,warm,low*(.25+.65*az*az));
+  zen*=mix(1.,.6,low);
+  vec3 col=mix(hor,zen,pow(y,mix(.42,.3,low)));
+  col+=vec3(1.,.58,.24)*low*az*az*exp(-y*7.)*.35*smoothstep(-.12,0.,sh);
+  col+=hor*.10*exp(-y*30.);
+  float m=max(mu,0.);
+  col+=uSunCol*(.04*pow(m,4.)+.18*pow(m,32.)+.6*pow(m,400.));
+  return col;
+}
+vec3 withClouds(vec3 rd,vec3 col,out float den){
+  den=0.;
+  if(rd.y<.01||uCloud<.01)return col;
+  float tc=1500./rd.y;
+  vec2 uv=(uRo.xz+rd.xz*tc)*.00028+uTime*vec2(.0035,.0018)*(1.+uWind*.08);
+  float n=fbm5(uv);
+  float cov=mix(.78,.28,uCloud);
+  den=smoothstep(cov,cov+.28,n)*smoothstep(.01,.16,rd.y);
+  float n2=fbm3(uv+normalize(uSun.xz+vec2(1e-4))*.05);
+  float sh=clamp((n-n2)*3.+.55,0.,1.);
+  float mu=max(dot(rd,uSun),0.);
+  vec3 cc=uSunCol*(.18+.55*sh)*.7+gAmb*.85;
+  cc+=uSunCol*pow(mu,8.)*.9*(1.-den);
+  return mix(col,cc,den*.95);
+}
+
+float shadowT(vec3 p){
+  float res=1.,t=.3;
+  if(uSun.y<0.)return 0.;
+  for(int i=0;i<24;i++){
+    vec3 q=p+uSun*t;
+    float h=q.y-terrainH(q.xz);
+    res=min(res,10.*h/t);
+    t+=clamp(h*.8,.4,14.);
+    if(res<0.||t>320.||q.y>50.)break;
+  }
+  return clamp(res,0.,1.);
+}
+
+float caustic(vec2 p,float t){
+  vec2 q=p*1.25;
+  float n1=fbm3(q+t*vec2(.31,.22));
+  float n2=fbm3(q*1.27-t*vec2(.24,-.29)+3.1);
+  return pow(clamp(1.-abs(n1-n2)*3.,0.,1.),6.)*1.1;
+}
+
+/* ---------- normals ---------- */
+float waterHD(vec2 p,float t,float dist){
+  vec2 f;float h=waterH(p,t,f);
+  float fade=1.-smoothstep(8.,140.,dist);
+  if(fade>0.){
+    vec2 q=p*1.15;float tt=t*(.55+uWind*.05);
+    float dd=fbm3(q+vec2(.7,.5)*tt)+.5*vnoise(q*3.3-vec2(.2,.9)*tt*1.4)+.25*vnoise(q*7.1+vec2(.5,.3)*tt*2.);
+    h+=dd*fade*(.010+.0045*uWind);
+  }
+  return h;
+}
+vec3 waterN(vec2 p,float t,float dist){
+  float e=.03+dist*.0025;
+  float h0=waterHD(p,t,dist);
+  float hx=waterHD(p+vec2(e,0.),t,dist);
+  float hz=waterHD(p+vec2(0.,e),t,dist);
+  return normalize(vec3(h0-hx,e,h0-hz));
+}
+float terrainHD(vec2 p,float dist){
+  float s=sandH(p),r=rocksH(p);
+  float fade=1.-smoothstep(3.,35.,dist);
+  if(r>s) return r+.45*fbm3(p*1.3)*(.3+.7*fade)+.08*vnoise(p*6.)*fade;
+  float d=shoreD(p);
+  float rp=sin(p.y*9.+p.x*1.5+3.*vnoise(p*.7))*.012*smoothstep(-9.,-4.,d);
+  float wr=sin(p.x*7.+p.y*3.+4.*vnoise(p*.5))*.010*(1.-smoothstep(-40.,-28.,d));
+  return s+(rp+wr)*fade+.04*fbm3(p*.9)*fade;
+}
+vec3 terrainN(vec2 p,float dist){
+  float e=.02+dist*.002;
+  float h0=terrainHD(p,dist);
+  return normalize(vec3(h0-terrainHD(p+vec2(e,0.),dist),e,h0-terrainHD(p+vec2(0.,e),dist)));
+}
+
+float ggx(vec3 n,vec3 v,vec3 l,float a){
+  vec3 h=normalize(l+v);float nh=max(dot(n,h),0.);
+  float a2=a*a;float dd=nh*nh*(a2-1.)+1.;
+  float D=a2/(PI*dd*dd);
+  float F=.02+.98*pow(1.-max(dot(h,v),0.),5.);
+  return min(D,400.)*F*.25*max(dot(n,l),0.)/max(dot(n,v),.15);
+}
+
+/* ---------- shading ---------- */
+vec3 shadeWater(vec3 p,vec3 rd,float t,vec2 fo,float wh,float tr){
+  vec3 n=waterN(p.xz,uTime,t);
+  vec3 v=-rd;
+  float ndv=max(dot(n,v),0.);
+  float F=.02+.98*pow(1.-ndv,5.);
+  float sh=uHQ>.5?shadowT(vec3(p.x,wh+.2,p.z)):1.;
+  vec3 r=reflect(rd,n);r.y=max(r.y,.01);
+  float cd;vec3 refl=withClouds(r,skyCol(r),cd);
+
+  float d=shoreD(p.xz);
+  float dep=stillDepth(d);
+  float thick=max(wh-tr,0.);
+  vec3 rr=refract(rd,n,1./1.333);
+  float ry=max(-rr.y,.15);
+  float path=thick/ry;
+  vec2 bp=p.xz+rr.xz*min(path,6.);
+
+  float turb=clamp(fo.x*.55+(1.-smoothstep(0.,1.8,dep))*.45,0.,1.);
+  vec3 sigma=vec3(.42,.07,.075)+vec3(.35,.42,.55)*turb;
+  vec3 scat=mix(vec3(.006,.04,.055),vec3(.05,.065,.045),turb);
+  vec3 Lw=uSunCol*max(uSun.y,0.)*.65*sh+gAmb*.8;
+
+  vec3 trans=exp(-sigma*path);
+  vec3 bedA=vec3(.55,.48,.36)*(.8+.4*vnoise(bp*.6));
+  if(rocksH(bp)>sandH(bp)-.05) bedA=vec3(.12,.12,.1);
+  vec3 dtr=exp(-sigma*thick);
+  float ca=1.+caustic(bp,uTime)*smoothstep(4.,.2,thick)*(1.-turb);
+  vec3 Lbed=uSunCol*max(uSun.y,0.)*ca*dtr*sh+gAmb*.55*sqrt(dtr);
+  vec3 under=bedA*Lbed*trans+Lw*scat*(1.-trans)*6.;
+
+  vec3 sunH=normalize(vec3(uSun.x,0.,uSun.z)+vec3(1e-4));
+  float back=pow(clamp(dot(rd,sunH),0.,1.),3.);
+  float crest=clamp(wh/(uHs*.55+.05),0.,1.);
+  under+=vec3(.04,.42,.34)*uSunCol*(back*.5+.06)*crest*crest*.4*sh*(1.-turb*.6);
+
+  vec3 col=mix(under,refl,F);
+  col+=uSunCol*ggx(n,v,uSun,.035+.007*uWind)*sh;
+
+  /* foam */
+  float edge=exp(-thick*28.)*(1.-smoothstep(1.,8.,d))*step(.001,thick);
+  float res=.22*(1.-smoothstep(.4,3.,dep))*step(0.,d)*smoothstep(.3,1.,uHs);
+  float wcap=smoothstep(6.,17.,uWind)*smoothstep(.6,.78,fbm3(p.xz*.11+uTime*vec2(.06,.12)))*smoothstep(1.,4.,dep);
+  float amt=clamp(fo.x*.9+fo.y*.8+edge*.95+res+wcap,0.,1.3);
+  vec2 fq=p.xz*1.2+vec2(.13,.22)*uTime*(1.+fo.x);
+  float ft=(fbm3(fq)+.55*vnoise(fq*3.7-uTime*.3))/1.55;
+  float th=mix(.9,.12,clamp(amt,0.,1.));
+  float cov=smoothstep(th,th+.12,ft)*smoothstep(0.,.06,amt);
+  cov=mix(cov,clamp(amt*.55,0.,1.),smoothstep(40.,260.,t));
+  float sub=clamp(amt,0.,1.)*(1.-cov);
+  col+=vec3(.05,.14,.13)*Lw*sub*.6;
+  vec3 fl=uSunCol*(.55*max(dot(n,uSun),0.)+.35*max(uSun.y,0.))*sh+gAmb*1.15;
+  col=mix(col,vec3(.9,.93,.92)*fl,cov*.97);
+  return col;
+}
+
+vec3 shadeLand(vec3 p,vec3 rd,float t){
+  vec3 n=terrainN(p.xz,t);
+  vec3 v=-rd;
+  float d=shoreD(p.xz);
+  float s=sandH(p.xz),rk=rocksH(p.xz);
+  float rm=smoothstep(-.02,.2,rk-s);
+  float R;float lv=swashLvl(p.xz,uTime,R);
+  float wet=1.-smoothstep(R*.75,R*1.05+.1,p.y);
+  float film=(1.-smoothstep(0.,.07,p.y-lv))*step(lv-.02,p.y);
+  wet=max(wet,film);
+  float sh=shadowT(p+vec3(0.,.05,0.));
+
+  vec3 dry=vec3(.80,.70,.54)*(.86+.28*vnoise(p.xz*.35)+.08*vnoise(p.xz*4.));
+  vec3 wetc=vec3(.36,.30,.22);
+  vec3 alb=mix(dry,wetc,wet);
+  float veg=(1.-smoothstep(-52.,-40.,d))*smoothstep(.5,.66,fbm3(p.xz*.09+2.))*smoothstep(.82,.95,n.y);
+  alb=mix(alb,mix(vec3(.17,.22,.09),vec3(.42,.38,.22),vnoise(p.xz*.7)),veg);
+  vec3 rock=vec3(.17,.155,.14)*(.55+.8*fbm3(p.xz*.6+p.y*.3));
+  rock*=.8+.35*sin(p.y*2.3+fbm3(p.xz*.2)*3.);
+  float scrub=smoothstep(3.,7.,p.y)*smoothstep(.72,.86,n.y)*smoothstep(.35,.55,fbm3(p.xz*.12));
+  rock=mix(rock,mix(vec3(.10,.12,.055),vec3(.30,.26,.15),vnoise(p.xz*.5)),scrub);
+  rock=mix(rock,vec3(.05,.07,.045),(1.-smoothstep(R+.15,R+.7,p.y))*.85);
+  alb=mix(alb,rock,rm);
+  float rwet=1.-smoothstep(R*.9,R*1.2+.6,p.y);
+
+  float nl=max(dot(n,uSun),0.);
+  vec3 col=alb*(uSunCol*nl*sh+gAmb*(.55+.45*n.y));
+  float gl=max(wet,rwet*rm);
+  float rough=mix(.45,.07,film);
+  float ndv=max(dot(n,v),0.);
+  float F=.02+.98*pow(1.-ndv,5.);
+  vec3 r=reflect(rd,n);r.y=max(r.y,.01);
+  vec3 rc=skyCol(r);
+  col=mix(col,rc,F*mix(.15,.85,film)*gl);
+  col+=uSunCol*ggx(n,v,uSun,rough)*gl*sh*mix(.35,1.,film);
+  if(t<6.&&rm<.5&&wet<.5){
+    float gli=step(.9992,hash12(floor(p.xz*90.)));
+    col+=uSunCol*gli*pow(max(dot(reflect(rd,n),uSun),0.),4.)*.7*sh*(1.-t/10.);
+  }
+  return col;
+}
+
+vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy*2.-uRes)/uRes.y;
+  vec3 rd=normalize(uFw*1.55+uRt*uv.x+uUp*uv.y);
+  gAmb=skyCol(vec3(0.,1.,0.))*.55+skyCol(normalize(vec3(-uSun.x,.2,-uSun.z)))*.45;
+  gAmb*=.75-uCloud*.18;
+
+  float tHit;
+  bool hit=march(uRo,rd,tHit);
+  if(!hit&&rd.y<0.){tHit=-uRo.y/rd.y;hit=true;}
+  vec3 col;
+  if(hit){
+    vec3 p=uRo+rd*tHit;
+    vec2 fo;float wh=waterH(p.xz,uTime,fo);
+    float tr=terrainH(p.xz);
+    if(wh>=tr) col=shadeWater(p,rd,tHit,fo,wh,tr);
+    else col=shadeLand(p,rd,tHit);
+    vec3 hd=normalize(vec3(rd.x,.03,rd.z));
+    vec3 fogC=skyCol(hd);
+    fogC+=uSunCol*pow(max(dot(rd,uSun),0.),6.)*.25;
+    float fa=1.-exp(-tHit*(.0009+.0006*uCloud));
+    col=mix(col,fogC,fa);
+  }else{
+    col=skyCol(rd);
+    float den;col=withClouds(rd,col,den);
+    float mu=dot(rd,uSun);
+    col+=uSunCol*(5.+19.*smoothstep(.02,.3,uSun.y))*smoothstep(.99975,.99988,mu)*(1.-den);
+  }
+  col*=uExp;
+  col=aces(col);
+  col=pow(col,vec3(1./2.2));
+  col+=(hash12(gl_FragCoord.xy+fract(uTime)*91.)-.5)/255.;
+  outColor=vec4(col,1.);
+}
+</script>
+
+<script>
+(function(){
+const canvas=document.getElementById('c');
+const gl=canvas.getContext('webgl2',{antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:false});
+if(!gl){document.body.insertAdjacentHTML('beforeend','<div class="err">这个浏览器不支持 WebGL2，无法运行实时海岸。请换用新版 Chrome、Edge、Safari 或 Firefox。</div>');return;}
+
+const vsSrc=`#version 300 es
+in vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`;
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));throw new Error(gl.getShaderInfoLog(s));}return s;}
+const prog=gl.createProgram();
+gl.attachShader(prog,sh(gl.VERTEX_SHADER,vsSrc));
+gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,document.getElementById('fs').textContent.trim()));
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(prog,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+const U={};['uRes','uTime','uRo','uFw','uRt','uUp','uSun','uSunCol','uHs','uPer','uWind','uCloud','uHQ','uExp'].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+
+/* ---- JS mirror of the terrain, for keeping the walker on the ground ---- */
+const fract=x=>x-Math.floor(x);
+function hash12(x,y){let a=fract(x*.1031),b=fract(y*.1031),c=fract(x*.1031);
+  const d=a*(b+33.33)+b*(c+33.33)+c*(a+33.33);a+=d;b+=d;c+=d;return fract((a+b)*c);}
+function vnoise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;const ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+  const a=hash12(ix,iy),b=hash12(ix+1,iy),c=hash12(ix,iy+1),d=hash12(ix+1,iy+1);
+  return (a+(b-a)*ux)+((c+(d-c)*ux)-(a+(b-a)*ux))*uy;}
+function fbm3(x,y){let a=.5,s=0;for(let i=0;i<3;i++){s+=a*vnoise(x,y);const nx=1.6*x-1.2*y,ny=1.2*x+1.6*y;x=nx;y=ny;a*=.5;}return s/.875;}
+const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const shoreD=(x,z)=>z+5*Math.sin(x*.011+.7)+2.5*Math.sin(x*.031+2.1);
+const barB=d=>{const q=(d-42)/10;return .6*Math.exp(-q*q);};
+function sandH(x,z){const d=shoreD(x,z);let h=-d*.045+barB(d);h+=(1-ss(-26,-8,d))*.9;
+  if(d<-30){h+=(1-ss(-72,-34,d))*(1.8+3.4*fbm3(x*.018+4,z*.018+4));}return Math.max(h,-18);}
+function rocksH(x,z){let h=-100;const qx=x+230,qz=(z-70)*.55;const r=Math.hypot(qx,qz);
+  if(r<165){const m=1-ss(10,160,r);h=38*m*(.45+.75*fbm3(x*.03+7,z*.03+7))-5;}return h;}
+const terrainH=(x,z)=>Math.max(sandH(x,z),rocksH(x,z));
+
+/* ---- state ---- */
+const $=id=>document.getElementById(id);
+const st={hour:16.6,hs:1.4,per:10,wind:6,cloud:.35,t:0,paused:false,flow:false};
+const cam={x:0,y:2,z:-18,yaw:0,pitch:-.05,mode:'walk'};
+const views={
+  beach:{x:0,z:-18,yaw:.05,pitch:-.045,mode:'walk',eye:1.7},
+  surf:{x:24,y:2.6,z:30,yaw:Math.PI*.78,pitch:-.06,mode:'fixed'},
+  drone:{x:70,y:42,z:-55,yaw:Math.atan2(-70,115),pitch:-.32,mode:'fly'},
+  head:{x:-150,z:30,yaw:1.35,pitch:-.12,mode:'walk',eye:1.8}
+};
+let eye=1.7;
+function setView(k){const v=views[k];cam.x=v.x;cam.z=v.z;cam.yaw=v.yaw;cam.pitch=v.pitch;cam.mode=v.mode;eye=v.eye||1.7;
+  if(v.y!==undefined)cam.y=v.y;
+  document.querySelectorAll('#views .btn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===k)));}
+setView('beach');
+
+function sunAt(hour){
+  const D=Math.PI/180,lat=34*D,dec=-10.6*D,H=(hour-12)*15*D;
+  const sa=Math.sin(lat)*Math.sin(dec)+Math.cos(lat)*Math.cos(dec)*Math.cos(H);
+  const alt=Math.asin(sa);
+  const az=Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(lat)-Math.tan(dec)*Math.cos(lat));
+  const ca=Math.cos(alt);
+  // world axes: +x = south, +y = up, +z = west (the sea)
+  const dir=[Math.cos(az)*ca,sa,Math.sin(az)*ca];
+  const zd=Math.min(90,Math.acos(Math.max(sa,0))/D);
+  const m=1/(Math.cos(zd*D)+.50572*Math.pow(96.07995-zd,-1.6364));
+  const tau=[.11,.172,.315];
+  const vis=ss(-.045,.02,sa);
+  const col=tau.map(k=>3.2*Math.exp(-k*m)*vis);
+  return {dir,col,alt:alt/D,sa};
+}
+const fmtH=h=>{const hh=Math.floor(h),mm=Math.floor((h-hh)*60);return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');};
+
+/* ---- controls ---- */
+function bindRange(id,key,fmt){const el=$(id),o=$('o-'+id);
+  const upd=()=>{st[key]=parseFloat(el.value);o.textContent=fmt(st[key]);};el.addEventListener('input',upd);upd();return el;}
+const hourEl=bindRange('hour','hour',fmtH);
+bindRange('hs','hs',v=>v.toFixed(2).replace(/0$/,'')+' m');
+bindRange('per','per',v=>v.toFixed(1)+' s');
+bindRange('wind','wind',v=>(v%1?v.toFixed(1):v)+' m/s');
+bindRange('cloud','cloud',v=>Math.round(v*100)+'%');
+$('views').addEventListener('click',e=>{const b=e.target.closest('.btn');if(b)setView(b.dataset.v);});
+const panel=$('panel'),tgl=$('tgl');
+function setPanel(open){panel.hidden=!open;tgl.setAttribute('aria-expanded',String(open));tgl.textContent=open?'收起':'参数';}
+tgl.addEventListener('click',()=>setPanel(panel.hidden));
+setPanel(window.innerWidth>560);
+$('b-pause').addEventListener('click',e=>{st.paused=!st.paused;e.currentTarget.setAttribute('aria-pressed',String(st.paused));e.currentTarget.textContent=st.paused?'继续':'暂停';});
+$('b-flow').addEventListener('click',e=>{st.flow=!st.flow;e.currentTarget.setAttribute('aria-pressed',String(st.flow));});
+
+/* pointer look */
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);canvas.classList.add('drag');});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;const k=.0042;
+  cam.yaw-=(e.clientX-drag.x)*k;cam.pitch=Math.max(-1.35,Math.min(.9,cam.pitch-(e.clientY-drag.y)*k));drag={x:e.clientX,y:e.clientY};});
+const endDrag=()=>{drag=null;canvas.classList.remove('drag');};
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+const keys={};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&/Arrow/.test(e.key))return;keys[e.key.toLowerCase()]=true;});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+
+/* ---- sound: brown-noise surf, envelope driven by the same wave phase as the shader ---- */
+let ac=null,gRumble,gHiss;
+function noiseBuf(brown){const n=ac.sampleRate*4,b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0);let l=0;
+  for(let i=0;i<n;i++){const w=Math.random()*2-1;if(brown){l=(l+.02*w)/1.02;d[i]=l*3.5;}else d[i]=w;}return b;}
+function startAudio(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  const master=ac.createGain();master.gain.value=.9;master.connect(ac.destination);
+  const s1=ac.createBufferSource();s1.buffer=noiseBuf(true);s1.loop=true;
+  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;
+  gRumble=ac.createGain();gRumble.gain.value=0;s1.connect(lp).connect(gRumble).connect(master);s1.start();
+  const s2=ac.createBufferSource();s2.buffer=noiseBuf(false);s2.loop=true;
+  const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=3200;bp.Q.value=.5;
+  const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=900;
+  gHiss=ac.createGain();gHiss.gain.value=0;s2.connect(hp).connect(bp).connect(gHiss).connect(master);s2.start();
+}
+$('b-sound').addEventListener('click',e=>{const b=e.currentTarget;
+  if(!ac){try{startAudio();}catch(err){b.textContent='无法播放';return;}b.setAttribute('aria-pressed','true');return;}
+  if(ac.state==='running'){ac.suspend();b.setAttribute('aria-pressed','false');}else{ac.resume();b.setAttribute('aria-pressed','true');}});
+function updateAudio(){
+  if(!ac||ac.state!=='running')return;
+  const w=2*Math.PI/st.per,k0=w*w/9.81;
+  const dShore=Math.max(0,shoreD(cam.x,cam.z));
+  const near=Math.exp(-Math.max(0,Math.hypot(Math.max(-shoreD(cam.x,cam.z),0),cam.mode==='fly'?cam.y:0)-5)/60);
+  const phS=w*st.t+k0*Math.sin(.17)*cam.x;
+  const us=fract(phS/(2*Math.PI));
+  const c1=2*w/Math.sqrt(9.81*.045);
+  const ub=fract((c1*Math.sqrt(46)+phS)/(2*Math.PI));
+  const amp=Math.min(1.4,st.hs/1.4);
+  const rumble=(.18+.9*Math.exp(-ub*4.5))*amp*near;
+  const hiss=(.05+.55*(us<.3?Math.sin(us/.3*Math.PI*.5):Math.exp(-(us-.3)*3.2)))*amp*near+.02*st.wind/20;
+  const now=ac.currentTime;
+  gRumble.gain.setTargetAtTime(rumble*.9,now,.15);
+  gHiss.gain.setTargetAtTime(hiss*.22,now,.12);
+}
+
+/* ---- resolution scaling ---- */
+let scale=.6,frames=0,acc=0,hq=1;
+const dpr=Math.min(window.devicePixelRatio||1,2);
+function resize(){const w=Math.max(1,Math.floor(innerWidth*dpr*scale)),h=Math.max(1,Math.floor(innerHeight*dpr*scale));
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
+addEventListener('resize',resize);resize();
+
+/* ---- loop ---- */
+let last=performance.now(),lastUI=0;
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(!st.paused)st.t+=dt;
+  if(st.flow&&!st.paused){st.hour+=dt/60;if(st.hour>18.4)st.hour=5.9;hourEl.value=st.hour;$('o-hour').textContent=fmtH(st.hour);}
+
+  // movement
+  const sp=(cam.mode==='fly'?14:keys['shift']?6:2.2)*dt;
+  const fx=Math.sin(cam.yaw),fz=Math.cos(cam.yaw);
+  let mx=0,mz=0;
+  if(keys['w']){mx+=fx;mz+=fz;} if(keys['s']){mx-=fx;mz-=fz;}
+  if(keys['a']){mx+=fz;mz-=fx;} if(keys['d']){mx-=fz;mz+=fx;}
+  if(mx||mz){if(cam.mode==='fixed')cam.mode='walk';cam.x+=mx*sp;cam.z+=mz*sp;}
+  if(cam.mode==='fly'){if(keys['e'])cam.y+=sp;if(keys['q'])cam.y=Math.max(4,cam.y-sp);}
+  if(cam.mode==='walk'){const g=Math.max(terrainH(cam.x,cam.z),.7);cam.y+=(g+eye-cam.y)*Math.min(1,dt*8);}
+
+  const cp=Math.cos(cam.pitch);
+  const fw=[Math.sin(cam.yaw)*cp,Math.sin(cam.pitch),Math.cos(cam.yaw)*cp];
+  let rt=[fw[1]*0-fw[2]*1,fw[2]*0-fw[0]*0,fw[0]*1-fw[1]*0];
+  const rl=Math.hypot(rt[0],rt[1],rt[2]);rt=rt.map(v=>v/rl);
+  const up=[rt[1]*fw[2]-rt[2]*fw[1],rt[2]*fw[0]-rt[0]*fw[2],rt[0]*fw[1]-rt[1]*fw[0]];
+
+  const sun=sunAt(st.hour);
+  const ex=.6+.55*(1-ss(.02,.35,sun.sa))+.7*(1-ss(-.06,.02,sun.sa));
+
+  resize();
+  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.uniform2f(U.uRes,canvas.width,canvas.height);
+  gl.uniform1f(U.uTime,st.t);
+  gl.uniform3f(U.uRo,cam.x,cam.y,cam.z);
+  gl.uniform3fv(U.uFw,fw);gl.uniform3fv(U.uRt,rt);gl.uniform3fv(U.uUp,up);
+  gl.uniform3fv(U.uSun,sun.dir);gl.uniform3fv(U.uSunCol,sun.col);
+  gl.uniform1f(U.uHs,st.hs);gl.uniform1f(U.uPer,st.per);gl.uniform1f(U.uWind,st.wind);gl.uniform1f(U.uCloud,st.cloud);
+  gl.uniform1f(U.uHQ,hq);gl.uniform1f(U.uExp,ex);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+
+  updateAudio();
+
+  // adaptive resolution toward ~45-60 fps
+  acc+=dt;frames++;
+  if(frames>=24){const avg=acc/frames;
+    if(avg>.026){if(scale>.42)scale=Math.max(.35,scale*.88);else hq=0;}
+    else if(avg<.0155){if(!hq)hq=1;else scale=Math.min(1/Math.max(1,dpr*.75),scale*1.07);}
+    frames=0;acc=0;}
+
+  if(now-lastUI>400){lastUI=now;
+    $('clock').textContent=fmtH(st.hour)+' · 太阳高度 '+sun.alt.toFixed(1)+'°';
+    const L0=9.81*st.per*st.per/(2*Math.PI),hb=st.hs/.78;
+    $('r-l0').textContent=L0.toFixed(0)+' m';
+    $('r-hb').textContent=hb.toFixed(1)+' m';
+    $('r-sz').textContent=Math.round(hb/.045)+' m';
+    $('r-c').textContent=Math.sqrt(9.81*hb).toFixed(1)+' m/s';
+    $('r-res').textContent=Math.round(scale*dpr*100)+'%'+(hq?'':' · 简化阴影');}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>

@@ -191,6 +191,9 @@ VIS[1005] = (ctx, t, s) => {
     const y0 = top + hl.y[0] * sc, y1 = top + hl.y[1] * sc;
     E.hlBar(ctx, left + (148 - THINK.x0 - 10) * sc, y0, left + (1716 - THINK.x0) * sc, y1, u, hl.col, .5);
   }
+  // 「一边做一边发现问题」：小虫子爬到出问题的那一段上；「还一边改」时被弹飞
+  { const yb = top + 583 * sc, xb = left + (980 - THINK.x0) * sc;
+    markBug(ctx, t, EV.bug_in, EV.bug_hit + .1, [[view.x + view.w / 2 + 80, yb - 150], [xb + 260, yb - 60], [xb, yb]], {size: 86, out: EV.bug_out}); }
   ctx.restore();
   // 页面占满画面时，左下角头像淡出，不压字；镜头末尾再淡回来接下一镜
   const ha = 1 - seg(t, EV.think_in + .3, EV.think_in + .8) * (1 - seg(t, s.end - .5, s.end));

@@ -102,6 +102,8 @@ VIS[705] = (ctx, t, s) => {
     const on = iv => iv.some(([a, b]) => ts >= a && ts < b);
     keycap(ctx, 1560, 780, '←', on(KEY_L), ka); keycap(ctx, 1710, 780, '→', on(KEY_R), ka);
   }
+  // 「它左右键是反的」：一只小虫子（bug）从右边爬进游戏画面
+  markBug(ctx, t, EV.rev_word - .9, EV.rev_word + .1, [[1940, 360], [1660, 430], [1420, 470]], {size: 96, b: s.end - .3});
   hostMorph(ctx, t, 1);
 };
 // 排最后：三款缩成一排，DeepSeek 掉到最右并变灰

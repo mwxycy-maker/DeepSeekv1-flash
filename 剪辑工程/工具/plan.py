@@ -135,7 +135,9 @@ EV = {
     'sec13': A(29, '除了推出') - .15, 'pareto': A(29, '成为帕累托'), 'api_in': A(29, '开放自研') - .2, 'api_hl': A(29, '开放自研'),
     'la_word': A(29, '那就是拉') + .3, 'hen_la': A(29, '就是狠拉') + .2, 'la_out': A(30, '官方说') - .2,
     'src_in': A(30, '又少又拉') - .1, 'apps': A(30, '某音'), 'apps_x': A(30, '里面的数据'),
-    'not_rec': A(31, '不是很推荐'), 'pro1': A(31, '搜得快'), 'pro2': A(31, '没广告'), 'end': A(32, '最后你用上'), 'bye': A(32, '下期再见'),
+    'not_rec': A(31, '不是很推荐'), 'reliab': A(31, '可靠度') - .1, 'merit': A(31, '如果非要'),
+    'rev_word': A(13, '反的') - .1, 'bug_in': A(20, '一边做'), 'bug_hit': A(20, '发现问题'), 'bug_out': A(20, '还一边改') + .1, 'nowifi': A(28, '连不上网') - .1,
+    'pro1': A(31, '搜得快'), 'pro2': A(31, '没广告'), 'end': A(32, '最后你用上'), 'bye': A(32, '下期再见'),
 }
 EV = {k: round(v, 3) for k, v in EV.items()}
 
@@ -172,7 +174,7 @@ def main():
     p = json.loads((ROOT / 'project.json').read_text())
     p.update(title='DeepSeek V4.1 Flash 三模型 PK', fps=30, audio='mix.m4a' if (ROOT / 'mix.m4a').exists() else '_demo-clock.wav',
              sources=SOURCES, images=IMAGES, shots=shots, subs=subs, events=EV,
-             sceneScripts=['s1.js', 's2.js', 's3.js', 's4.js', 's5.js', 's6.js'],
+             sceneScripts=['marks.js', 's1.js', 's2.js', 's3.js', 's4.js', 's5.js', 's6.js'],
              fonts=['64px Sub', '40px Black', '120px Title', '80px Num'],
              extra={'pieces': tl.pieces, 'holds': tl.hold_at, 'data': DATA, 'mv': [MV_AT, MV_LEN]})
     (ROOT / 'project.json').write_text(json.dumps(p, ensure_ascii=False, indent=1) + '\n')

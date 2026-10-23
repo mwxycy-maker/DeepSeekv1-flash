@@ -119,7 +119,7 @@ SFX = [
     S('whoosh_deep', EV['g1'] - .3, -11, dur=1.2), S('whoosh_swipe', EV['g2'] - .1, -11), S('whoosh_swipe', EV['g3'] - .1, -11),
     S('whoosh_low', EV['gop'], -13, dur=.9), S('whoosh_swipe', EV['gop_light'], -16),
     S('whoosh_low', EV['ggpt'], -13, dur=.9), S('whoosh_low', EV['gds'], -13, dur=.9),
-    S('error', EV['keys_rev'] - .1, -14, dur=.9), S('buzzer', EV['keys'] + .2, -18),
+    S('error', EV['keys_rev'] - .1, -16, dur=.7), S('tick', EV['rev_word'] + .1, -18, dur=.2),   # 小虫子爬到位
     S('whoosh_low', EV['rank'], -13, dur=.9), S('slide_down', EV['rank_last'], -11),
     S('whoosh_deep', EV['cmp'] - .1, -12, dur=1.0), S('cash', EV['c_ds'], -14, dur=1.0), S('cash', EV['c_op'], -12, dur=1.0),
     S('impact', EV['x35'], -8), S('crash', EV['crash'], -8, dur=2.2),
@@ -138,7 +138,7 @@ SFX = [
     # ⑩ 内心戏
     S('pop', EV['flash_lbl'], -13), S('riser_short', EV['max'] + .55, -14, 'end'), S('ding', EV['max'] + .55, -12),
     S('whoosh_low', EV['think_in'], -13, dur=.9),
-    S('error', EV['think_find'], -18, dur=.6), S('pop', EV['think_fix'], -15), S('ding', EV['think_out'], -12),
+    S('error', EV['think_find'], -18, dur=.6), S('pop', EV['think_fix'], -15), S('tick', EV['bug_hit'] + .1, -19, dur=.2), S('whoosh_cartoon', EV['bug_out'], -16, dur=.6),   # 虫子爬到位、被弹飞 S('ding', EV['think_out'], -12),
     # ⑪ 接入教程
     S('pop', EV['dsh_ds'], -13), S('whoosh_swipe', EV['dsh_in'] - .2, -14), S('pop', EV['dsh_in'], -10), S('sparkle_star', EV['dsh_all'], -16, dur=1.2),
     S('whoosh_low', EV['la_in'] - .1, -12, dur=.9),
@@ -148,13 +148,14 @@ SFX = [
     S('pop', EV['wb'], -12), S('pop', EV['kimi'], -12), S('pop', EV['builtin'], -13),
     # ⑫ 余额
     S('whoosh_low', EV['bal_in'], -13, dur=.9), S('coin', EV['bal_hl'] + .2, -14),
-    S('scratch', EV['oops'], -7, dur=.6), S('whoosh_swipe', EV['fix_in'], -13), S('error', EV['fix_hl'] + .2, -15, dur=.9),
+    S('scratch', EV['oops'], -7, dur=.6), S('glitch', EV['nowifi'] + .3, -21, dur=.35),   # 断网图标划斜杠 S('whoosh_swipe', EV['fix_in'], -13), S('error', EV['fix_hl'] + .2, -15, dur=.9),
     # ⑬ 搜索 API
     S('pop', EV['pareto'], -13), S('whoosh_deep', EV['api_in'] - .2, -12, dur=1.0), S('whoosh_swipe', EV['api_hl'], -18),
     S('impact', EV['la_word'], -7), S('boom', EV['hen_la'], -6),
     S('pop', EV['src_in'], -12), S('pop', EV['src_in'] + .35, -12),
     S('pop', EV['apps'], -14), S('pop', EV['apps'] + .28, -14), S('pop', EV['apps'] + .56, -14), S('pop', EV['apps'] + .84, -14),
     S('crash_toy', EV['apps_x'] + .15, -19, dur=.55),   # 「拿不到」用碎裂声，不用刺耳的错误蜂鸣
+    S('pop_cartoon', EV['reliab'] + .3, -14), S('pop', EV['not_rec'] + .1, -13),   # 警告三角落下、圆圈叉画出
     S('ding', EV['pro1'], -13), S('ding', EV['pro2'], -13),
     S('pop', EV['end'] + .4, -13),
 ]

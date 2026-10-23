@@ -173,7 +173,7 @@ VIS[1202] = (ctx, t, s) => {
   const cr = [lerp(0, 300, zk), lerp(0, 30, zk), lerp(851, 500, zk), lerp(778 * .62, 500 * h / (w - 46) * (851 / 851) * .56, zk)];
   cr[3] = cr[2] * h / (w - 46);
   const M = windowCard(ctx, {t, key: 'fix', cx: 1040, cy: 470, w, h: h + 46, a: EV.fix_in, flat: true,
-    content: (g, x, y, ww, hh) => { g.fillStyle = '#fff'; g.fillRect(x, y, ww, hh); const im = E.img('修复dsh'); if (E.ready(im)) g.drawImage(im, cr[0], cr[1], cr[2], cr[3], x, y, ww, hh); }});
+    content: (g, x, y, ww, hh) => { g.fillStyle = '#fff'; g.fillRect(x, y, ww, hh); const im = E.img('修复dsh'); if (E.ready(im)) { const k = E.sizeOf(im)[0] / 851; g.drawImage(im, cr[0] * k, cr[1] * k, cr[2] * k, cr[3] * k, x, y, ww, hh); } }});   // 高清重排图：坐标仍按原图 851 宽，按倍率换算
   windowCard(ctx, {t, key: 'bal', cx: 1040, cy: 480, w: 1420, h: Math.round(1420 * 1240 / 1838 * .62) + 46, b: s.start - .05, dOut: .4, flat: true,
     content: (g, x, y, ww, hh) => { const im = E.img('余额'); if (E.ready(im)) g.drawImage(im, 0, 0, 1838, 1240 * .62, x, y, ww, hh); }});
   if (M) {

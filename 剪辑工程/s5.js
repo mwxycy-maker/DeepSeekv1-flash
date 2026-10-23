@@ -185,7 +185,7 @@ VIS[1005] = (ctx, t, s) => {
   ctx.clip();
   const im = E.img('雷峰塔思考');
   const top = vy + 20 - pan * (h - view.h + 40), left = view.x - view.w / 2 + 20;
-  if (E.ready(im)) ctx.drawImage(im, THINK.x0, 0, cw, THINK.ih, left, top, cw * sc, h);
+  if (E.ready(im)) { const k = E.sizeOf(im)[0] / THINK.iw; ctx.drawImage(im, THINK.x0 * k, 0, cw * k, THINK.ih * k, left, top, cw * sc, h); }   // 高清重排图按倍率换算
   for (const hl of THINK_HL) {
     const u = seg(t, EV[hl.ev] + (hl.d || 0), EV[hl.ev] + (hl.d || 0) + .7); if (u <= 0) continue;
     const y0 = top + hl.y[0] * sc, y1 = top + hl.y[1] * sc;

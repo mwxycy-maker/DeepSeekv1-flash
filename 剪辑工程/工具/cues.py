@@ -154,7 +154,7 @@ SFX = [
     S('impact', EV['la_word'], -7), S('boom', EV['hen_la'], -6),
     S('pop', EV['src_in'], -12), S('pop', EV['src_in'] + .35, -12),
     S('pop', EV['apps'], -14), S('pop', EV['apps'] + .28, -14), S('pop', EV['apps'] + .56, -14), S('pop', EV['apps'] + .84, -14),
-    S('buzzer', EV['apps_x'] + .1, -16),
+    S('crash_toy', EV['apps_x'] + .15, -19, dur=.55),   # 「拿不到」用碎裂声，不用刺耳的错误蜂鸣
     S('ding', EV['pro1'], -13), S('ding', EV['pro2'], -13),
     S('pop', EV['end'] + .4, -13),
 ]
